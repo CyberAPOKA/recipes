@@ -1,0 +1,14 @@
+node_modules
+.expo
+.expo-shared
+dist
+.git
+.gitignore
+.env
+.env.local
+.DS_Store
+Thumbs.db
+*.log
+android
+ios
+
