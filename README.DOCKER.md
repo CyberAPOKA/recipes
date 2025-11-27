@@ -74,10 +74,21 @@ docker-compose up -d --build
 **Backend (Laravel):**
 
 ```bash
+# Entrar no bash do container
+docker-compose exec backend bash
+
+# Executar comandos Artisan diretamente
 docker-compose exec backend php artisan migrate
+docker-compose exec backend php artisan key:generate
 docker-compose exec backend php artisan tinker
+docker-compose exec backend php artisan route:list
+
+# Comandos Composer
 docker-compose exec backend composer install
+docker-compose exec backend composer update
 ```
+
+**⚠️ IMPORTANTE**: O nome do serviço é `backend`, não `app`!
 
 **Web (Vue):**
 
