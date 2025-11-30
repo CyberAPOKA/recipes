@@ -1,17 +1,18 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useRecipeStore } from '../../stores/recipe'
+import { storeToRefs } from 'pinia'
+import { useRecipeStore } from '@/stores/recipe'
 import { useI18n } from 'vue-i18n'
-import Card from '../components/daisyui/Card.vue'
-import Input from '../components/daisyui/Input.vue'
-import Button from '../components/daisyui/Button.vue'
+import Card from '@/components/daisyui/Card.vue'
+import Input from '@/components/daisyui/Input.vue'
+import Button from '@/components/daisyui/Button.vue'
 
 const router = useRouter()
 const recipeStore = useRecipeStore()
 const { t } = useI18n()
 
-const { recipes, loading, pagination } = recipeStore
+const { recipes, loading, pagination } = storeToRefs(recipeStore)
 const search = ref('')
 let searchTimeout = null
 

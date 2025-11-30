@@ -1,11 +1,11 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../../stores/auth'
-import Card from '../components/daisyui/Card.vue'
-import Input from '../components/daisyui/Input.vue'
-import Button from '../components/daisyui/Button.vue'
-import Alert from '../components/daisyui/Alert.vue'
+import { useAuthStore } from '@/stores/auth'
+import Card from '@/components/daisyui/Card.vue'
+import Input from '@/components/daisyui/Input.vue'
+import Button from '@/components/daisyui/Button.vue'
+import Alert from '@/components/daisyui/Alert.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

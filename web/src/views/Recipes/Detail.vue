@@ -1,17 +1,25 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useRecipeStore } from '../stores/recipe'
+import { storeToRefs } from 'pinia'
+import { useRecipeStore } from '@/stores/recipe'
 import { useI18n } from 'vue-i18n'
-import Card from '../components/daisyui/Card.vue'
-import Button from '../components/daisyui/Button.vue'
+import Card from '@/components/daisyui/Card.vue'
+import Button from '@/components/daisyui/Button.vue'
 
 const route = useRoute()
 const router = useRouter()
 const recipeStore = useRecipeStore()
 const { t } = useI18n()
 
-const { currentRecipe: recipe, loading } = recipeStore
+const { currentRecipe: recipe, loading } = storeToRefs(recipeStore)
+
+const fetchRecipeData = () => {
+  const recipeId = Number(route.params.id)
+  if (recipeId) {
+    recipeStore.fetchRecipe(recipeId)
+  }
+}
 
 const handlePrint = () => {
   window.print()
@@ -19,7 +27,8 @@ const handlePrint = () => {
 
 const handleDelete = async () => {
   if (confirm(t('recipe.deleteConfirm'))) {
-    const result = await recipeStore.deleteRecipe(route.params.id)
+    const recipeId = Number(route.params.id)
+    const result = await recipeStore.deleteRecipe(recipeId)
     if (result.success) {
       router.push('/recipes')
     }
@@ -27,7 +36,12 @@ const handleDelete = async () => {
 }
 
 onMounted(() => {
-  recipeStore.fetchRecipe(route.params.id)
+  fetchRecipeData()
+})
+
+// Watch for route changes to reload recipe when navigating between recipes
+watch(() => route.params.id, () => {
+  fetchRecipeData()
 })
 </script>
 

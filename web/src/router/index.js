@@ -5,37 +5,37 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/Login.vue'),
+    component: () => import('../views/Auth/Login.vue'),
     meta: { requiresAuth: false },
   },
   {
     path: '/register',
     name: 'Register',
-    component: () => import('../views/Register.vue'),
+    component: () => import('../views/Auth/Register.vue'),
     meta: { requiresAuth: false },
   },
   {
     path: '/recipes',
     name: 'Recipes',
-    component: () => import('../views/Recipes.vue'),
+    component: () => import('../views/Recipes/Index.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/recipes/create',
     name: 'RecipeCreate',
-    component: () => import('../views/RecipeForm.vue'),
+    component: () => import('../views/Recipes/Form.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/recipes/:id',
     name: 'RecipeDetail',
-    component: () => import('../views/RecipeDetail.vue'),
+    component: () => import('../views/Recipes/Detail.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/recipes/:id/edit',
     name: 'RecipeEdit',
-    component: () => import('../views/RecipeForm.vue'),
+    component: () => import('../views/Recipes/Form.vue'),
     meta: { requiresAuth: true },
   },
   {

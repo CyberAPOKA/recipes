@@ -1,13 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useRecipeStore } from '../../stores/recipe'
-import { useCategoryStore } from '../../stores/category'
-import Card from '../components/daisyui/Card.vue'
-import Input from '../components/daisyui/Input.vue'
-import Textarea from '../components/daisyui/Textarea.vue'
-import Select from '../components/daisyui/Select.vue'
-import Button from '../components/daisyui/Button.vue'
+import { useRecipeStore } from '@/stores/recipe'
+import { useCategoryStore } from '@/stores/category'
+import Card from '@/components/daisyui/Card.vue'
+import Input from '@/components/daisyui/Input.vue'
+import Textarea from '@/components/daisyui/Textarea.vue'
+import Select from '@/components/daisyui/Select.vue'
+import Button from '@/components/daisyui/Button.vue'
 
 const route = useRoute()
 const router = useRouter()
