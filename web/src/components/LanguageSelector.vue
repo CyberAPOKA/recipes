@@ -10,6 +10,9 @@ const { setLocale, initializeLocale } = store
 
 onMounted(() => {
     initializeLocale()
+    if (currentLocale.value?.code) {
+        selectedCode.value = currentLocale.value.code
+    }
 })
 
 const selectedCode = ref('pt-BR')

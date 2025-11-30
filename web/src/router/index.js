@@ -1,0 +1,66 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+
+const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/Register.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/recipes',
+    name: 'Recipes',
+    component: () => import('../views/Recipes.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/recipes/create',
+    name: 'RecipeCreate',
+    component: () => import('../views/RecipeForm.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/recipes/:id',
+    name: 'RecipeDetail',
+    component: () => import('../views/RecipeDetail.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/recipes/:id/edit',
+    name: 'RecipeEdit',
+    component: () => import('../views/RecipeForm.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/',
+    redirect: '/recipes',
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+})
+
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  authStore.initAuth()
+
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    next('/login')
+  } else if ((to.path === '/login' || to.path === '/register') && authStore.isAuthenticated) {
+    next('/recipes')
+  } else {
+    next()
+  }
+})
+
+export default router
+
