@@ -28,23 +28,14 @@ watch(selectedCode, (val) => {
 </script>
 
 <template>
-    <div class="language-selector">
-        <div class="flex items-center gap-2">
-            <img v-if="currentLocale?.img" :src="currentLocale.img" :alt="currentLocale?.name"
-                class="w-5 h-5 rounded-full transition-all duration-300" />
-            <span v-else class="text-lg">{{ currentLocale?.flag }}</span>
-            <select class="select select-sm select-bordered" v-model="selectedCode">
-                <option v-for="locale in availableLocales" :key="locale.code" :value="locale.code">
-                    {{ locale.name }}
-                </option>
-            </select>
-        </div>
+    <div class="flex items-center gap-2">
+        <img v-if="currentLocale?.img" :src="currentLocale.img" :alt="currentLocale?.name"
+            class="w-5 h-5 rounded-full transition-all duration-300" />
+        <span v-else class="text-lg">{{ currentLocale?.flag }}</span>
+        <select class="select select-sm select-bordered" v-model="selectedCode">
+            <option v-for="locale in availableLocales" :key="locale.code" :value="locale.code">
+                {{ locale.name }}
+            </option>
+        </select>
     </div>
 </template>
-
-<style scoped>
-.language-selector .dropdown-content .active {
-    background-color: hsl(var(--a));
-    color: hsl(var(--ac));
-}
-</style>
