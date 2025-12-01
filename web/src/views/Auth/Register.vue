@@ -27,7 +27,7 @@ const handleRegister = async () => {
   const result = await authStore.register(form.value)
 
   if (result.success) {
-    router.push('/recipes')
+    router.push('/')
   } else {
     error.value = result.message
   }

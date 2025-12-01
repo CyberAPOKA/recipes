@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Recipe\ScrapeRecipeRequest;
 use App\Http\Requests\Recipe\StoreRecipeRequest;
 use App\Http\Requests\Recipe\UpdateRecipeRequest;
 use App\Http\Resources\RecipeResource;
@@ -20,12 +21,46 @@ class RecipeController extends Controller
     }
 
     /**
-     * Display a listing of the user's recipes.
+     * Display a listing of all recipes.
      */
     public function index(Request $request): JsonResponse
     {
-        $search = $request->query('search');
-        $recipes = $this->recipeService->getUserRecipes($request->user(), $search);
+        // Check if filters are provided (new format) or just search (old format for backward compatibility)
+        $hasFilters = $request->has(['category_id', 'servings_operator', 'servings_value', 'prep_time_operator', 'prep_time_value']) 
+            || $request->has('category_id') 
+            || $request->has('servings_operator') 
+            || $request->has('prep_time_operator');
+
+        if ($hasFilters) {
+            $filters = [
+                'category_id' => $request->query('category_id'),
+                'servings' => [
+                    'operator' => $request->query('servings_operator'),
+                    'value' => $request->query('servings_value'),
+                ],
+                'prep_time' => [
+                    'operator' => $request->query('prep_time_operator'),
+                    'value' => $request->query('prep_time_value'),
+                ],
+                'search' => $request->query('search'),
+            ];
+
+            // Remove empty filter values
+            $filters = array_filter($filters, function ($value) {
+                if (is_array($value)) {
+                    return !empty(array_filter($value));
+                }
+                return $value !== null && $value !== '';
+            });
+
+            // Use getPublicRecipes to return all recipes (not filtered by user)
+            $recipes = $this->recipeService->getPublicRecipes($filters, $request->user());
+        } else {
+            // Backward compatibility: use public recipes method with just search
+            $search = $request->query('search');
+            $filters = $search ? ['search' => $search] : [];
+            $recipes = $this->recipeService->getPublicRecipes($filters, $request->user());
+        }
 
         return response()->json([
             'data' => RecipeResource::collection($recipes->items()),
@@ -116,13 +151,9 @@ class RecipeController extends Controller
     /**
      * Scrape recipe from external URL (TudoGostoso)
      */
-    public function scrape(Request $request): JsonResponse
+    public function scrape(ScrapeRecipeRequest $request): JsonResponse
     {
-        $request->validate([
-            'url' => ['required', 'url'],
-        ]);
-
-        $result = $this->scraperService->scrapeTudoGostoso($request->input('url'));
+        $result = $this->scraperService->scrapeTudoGostoso($request->validated()['url']);
 
         if (!$result['success']) {
             return response()->json([

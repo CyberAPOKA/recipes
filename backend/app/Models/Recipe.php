@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Recipe extends Model
 {
+    use HasFactory;
     /**
      * The attributes that are mass assignable.
      *
@@ -38,6 +41,30 @@ class Recipe extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Get the comments for the recipe.
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(RecipeComment::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get the ratings for the recipe.
+     */
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(RecipeRating::class);
+    }
+
+    /**
+     * Get the average rating for the recipe.
+     */
+    public function getAverageRatingAttribute(): float
+    {
+        return $this->ratings()->avg('rating') ?? 0;
     }
 
     /**

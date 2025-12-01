@@ -32,6 +32,67 @@ class RecipeService
     }
 
     /**
+     * Get all recipes for a user with filters.
+     */
+    public function getUserRecipesWithFilters(User $user, array $filters = []): LengthAwarePaginator
+    {
+        $query = Recipe::where('user_id', $user->id)
+            ->with('category')
+            ->orderBy('created_at', 'desc');
+
+        // Filter by category
+        if (isset($filters['category_id']) && $filters['category_id']) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        // Filter by servings
+        if (isset($filters['servings']) && $filters['servings']) {
+            $servingsFilter = $filters['servings'];
+            if (isset($servingsFilter['operator']) && isset($servingsFilter['value'])) {
+                $operator = $servingsFilter['operator']; // 'exact', 'above', 'below'
+                $value = (int) $servingsFilter['value'];
+                
+                if ($operator === 'exact') {
+                    $query->where('servings', $value);
+                } elseif ($operator === 'above') {
+                    $query->where('servings', '>=', $value);
+                } elseif ($operator === 'below') {
+                    $query->where('servings', '<=', $value);
+                }
+            }
+        }
+
+        // Filter by prep time
+        if (isset($filters['prep_time']) && $filters['prep_time']) {
+            $prepTimeFilter = $filters['prep_time'];
+            if (isset($prepTimeFilter['operator']) && isset($prepTimeFilter['value'])) {
+                $operator = $prepTimeFilter['operator']; // 'exact', 'above', 'below'
+                $value = (int) $prepTimeFilter['value'];
+                
+                if ($operator === 'exact') {
+                    $query->where('prep_time_minutes', $value);
+                } elseif ($operator === 'above') {
+                    $query->where('prep_time_minutes', '>=', $value);
+                } elseif ($operator === 'below') {
+                    $query->where('prep_time_minutes', '<=', $value);
+                }
+            }
+        }
+
+        // Search
+        if (isset($filters['search']) && $filters['search']) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('instructions', 'like', "%{$search}%")
+                    ->orWhere('ingredients', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->paginate(12);
+    }
+
+    /**
      * Get a single recipe by ID.
      */
     public function getRecipe(int $id, User $user): ?Recipe
@@ -135,6 +196,85 @@ class RecipeService
         if (Storage::disk('public')->exists($path)) {
             Storage::disk('public')->delete($path);
         }
+    }
+
+    /**
+     * Get all public recipes with filters.
+     */
+    public function getPublicRecipes(array $filters = [], ?User $user = null): LengthAwarePaginator
+    {
+        $query = Recipe::with(['category', 'user'])
+            ->withCount(['comments', 'ratings'])
+            ->withAvg('ratings', 'rating')
+            ->orderBy('created_at', 'desc');
+
+        // Filter by category
+        if (isset($filters['category_id']) && $filters['category_id']) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        // Filter by servings
+        if (isset($filters['servings']) && $filters['servings']) {
+            $servingsFilter = $filters['servings'];
+            if (isset($servingsFilter['operator']) && isset($servingsFilter['value'])) {
+                $operator = $servingsFilter['operator']; // 'exact', 'above', 'below'
+                $value = (int) $servingsFilter['value'];
+                
+                if ($operator === 'exact') {
+                    $query->where('servings', $value);
+                } elseif ($operator === 'above') {
+                    $query->where('servings', '>=', $value);
+                } elseif ($operator === 'below') {
+                    $query->where('servings', '<=', $value);
+                }
+            }
+        }
+
+        // Filter by prep time
+        if (isset($filters['prep_time']) && $filters['prep_time']) {
+            $prepTimeFilter = $filters['prep_time'];
+            if (isset($prepTimeFilter['operator']) && isset($prepTimeFilter['value'])) {
+                $operator = $prepTimeFilter['operator']; // 'exact', 'above', 'below'
+                $value = (int) $prepTimeFilter['value'];
+                
+                if ($operator === 'exact') {
+                    $query->where('prep_time_minutes', $value);
+                } elseif ($operator === 'above') {
+                    $query->where('prep_time_minutes', '>=', $value);
+                } elseif ($operator === 'below') {
+                    $query->where('prep_time_minutes', '<=', $value);
+                }
+            }
+        }
+
+        // Filter to show only user's recipes
+        if (isset($filters['my_recipes']) && $filters['my_recipes'] && $user) {
+            $query->where('user_id', $user->id);
+        }
+
+        // Search
+        if (isset($filters['search']) && $filters['search']) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('instructions', 'like', "%{$search}%")
+                    ->orWhere('ingredients', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = request()->query('per_page', 15);
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Get a public recipe by ID (any user can view).
+     */
+    public function getPublicRecipe(int $id): ?Recipe
+    {
+        return Recipe::with(['category', 'user', 'comments.user', 'ratings'])
+            ->withCount(['comments', 'ratings'])
+            ->withAvg('ratings', 'rating')
+            ->find($id);
     }
 
     /**

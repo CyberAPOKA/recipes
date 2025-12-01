@@ -40,7 +40,15 @@ const routes = [
   },
   {
     path: '/',
-    redirect: '/recipes',
+    name: 'Home',
+    component: () => import('../views/Public/Recipes.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/public/recipes/:id',
+    name: 'PublicRecipeDetail',
+    component: () => import('../views/Public/RecipeDetail.vue'),
+    meta: { requiresAuth: false },
   },
 ]
 
@@ -56,7 +64,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
   } else if ((to.path === '/login' || to.path === '/register') && authStore.isAuthenticated) {
-    next('/recipes')
+    next('/')
   } else {
     next()
   }

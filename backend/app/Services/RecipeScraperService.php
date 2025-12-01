@@ -15,11 +15,6 @@ class RecipeScraperService
     public function scrapeTudoGostoso(string $url): array
     {
         try {
-            // Validate URL is from TudoGostoso
-            if (!str_contains($url, 'tudogostoso.com.br')) {
-                throw new \Exception('URL deve ser do site TudoGostoso');
-            }
-
             // Try to fetch using Laravel Http first
             try {
                 $response = Http::timeout(30)

@@ -25,7 +25,7 @@ const handleLogin = async () => {
   const result = await authStore.login(form.value)
 
   if (result.success) {
-    router.push('/recipes')
+    router.push('/')
   } else {
     error.value = result.message
   }

@@ -46,7 +46,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="container mx-auto p-4">
+  <div class="p-4">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold">{{ $t('recipe.myRecipes') }}</h1>
       <Button variant="primary" @click="$router.push('/recipes/create')">

@@ -15,11 +15,11 @@ export const useRecipeStore = defineStore('recipe', () => {
   })
 
   // Fetch all recipes
-  const fetchRecipes = async (search = '', page = 1) => {
+  const fetchRecipes = async (search = '', page = 1, filters = {}) => {
     loading.value = true
     error.value = null
     try {
-      const response = await recipeApi.getAll(search)
+      const response = await recipeApi.getAll(search, page, filters)
       recipes.value = response.data.data || []
       pagination.value = response.data.meta || {
         current_page: 1,
