@@ -94,6 +94,9 @@ class RecipeScraperService
             // Extract instructions
             $instructions = $this->extractInstructions($xpath);
             
+            // Extract image URL
+            $imageUrl = $this->extractImageUrl($xpath);
+            
             // Debug: log extracted data
             Log::debug('Scraped data', [
                 'title' => $title,
@@ -102,6 +105,7 @@ class RecipeScraperService
                 'prep_time' => $prepTime,
                 'ingredients_length' => strlen($ingredients),
                 'instructions_length' => strlen($instructions),
+                'image_url' => $imageUrl,
             ]);
 
             return [
@@ -113,6 +117,7 @@ class RecipeScraperService
                     'prep_time_minutes' => $prepTime,
                     'ingredients' => $ingredients,
                     'instructions' => $instructions,
+                    'image_url' => $imageUrl,
                 ]
             ];
         } catch (\Exception $e) {
@@ -211,20 +216,57 @@ class RecipeScraperService
             
             // Try datetime attribute first
             $timeAttr = $timeNode->getAttribute('datetime');
-            if (!empty($timeAttr) && preg_match('/PT(\d+)M/i', $timeAttr, $matches)) {
-                return (int) $matches[1];
+            if (!empty($timeAttr)) {
+                // Check for hours format: PT1H, PT2H, etc.
+                if (preg_match('/PT(\d+)H/i', $timeAttr, $matches)) {
+                    return (int) $matches[1] * 60; // Convert hours to minutes
+                }
+                // Check for minutes format: PT30M, PT45M, etc.
+                if (preg_match('/PT(\d+)M/i', $timeAttr, $matches)) {
+                    return (int) $matches[1];
+                }
+                // Check for combined format: PT1H30M
+                if (preg_match('/PT(?:(\d+)H)?(?:(\d+)M)?/i', $timeAttr, $matches)) {
+                    $hours = isset($matches[1]) && !empty($matches[1]) ? (int) $matches[1] : 0;
+                    $minutes = isset($matches[2]) && !empty($matches[2]) ? (int) $matches[2] : 0;
+                    return ($hours * 60) + $minutes;
+                }
             }
             
             // Try title attribute
             $titleAttr = $timeNode->getAttribute('title');
-            if (!empty($titleAttr) && preg_match('/PT(\d+)M/i', $titleAttr, $matches)) {
-                return (int) $matches[1];
+            if (!empty($titleAttr)) {
+                // Check for hours format: PT1H, PT2H, etc.
+                if (preg_match('/PT(\d+)H/i', $titleAttr, $matches)) {
+                    return (int) $matches[1] * 60; // Convert hours to minutes
+                }
+                // Check for minutes format: PT30M, PT45M, etc.
+                if (preg_match('/PT(\d+)M/i', $titleAttr, $matches)) {
+                    return (int) $matches[1];
+                }
+                // Check for combined format: PT1H30M
+                if (preg_match('/PT(?:(\d+)H)?(?:(\d+)M)?/i', $titleAttr, $matches)) {
+                    $hours = isset($matches[1]) && !empty($matches[1]) ? (int) $matches[1] : 0;
+                    $minutes = isset($matches[2]) && !empty($matches[2]) ? (int) $matches[2] : 0;
+                    return ($hours * 60) + $minutes;
+                }
             }
             
             // Try text content
             $text = trim($timeNode->textContent);
+            // Check for hours format: 1h, 2h, etc.
+            if (preg_match('/(\d+)\s*h/i', $text, $matches)) {
+                return (int) $matches[1] * 60; // Convert hours to minutes
+            }
+            // Check for minutes format: 30 min, 45 min, etc.
             if (preg_match('/(\d+)\s*min/i', $text, $matches)) {
                 return (int) $matches[1];
+            }
+            // Check for combined format: 1h30min, 1h 30min
+            if (preg_match('/(\d+)\s*h\s*(?:(\d+)\s*min)?/i', $text, $matches)) {
+                $hours = (int) $matches[1];
+                $minutes = isset($matches[2]) && !empty($matches[2]) ? (int) $matches[2] : 0;
+                return ($hours * 60) + $minutes;
             }
         }
 
@@ -365,6 +407,78 @@ class RecipeScraperService
         $instructionsHtml .= '</ol>';
         
         return $instructionsHtml !== '<ol></ol>' ? $instructionsHtml : '';
+    }
+
+    /**
+     * Extract image URL from recipe page
+     */
+    private function extractImageUrl(DOMXPath $xpath): ?string
+    {
+        // Strategy 1: Try to find picture element with player-fallback-img class
+        $pictureNodes = $xpath->query('//picture[@class="player-fallback-img u-hidden"]//img');
+        
+        if ($pictureNodes->length > 0) {
+            $imgNode = $pictureNodes->item(0);
+            $src = $imgNode->getAttribute('src');
+            if (!empty($src)) {
+                return $src;
+            }
+        }
+        
+        // Try source element with srcset from player-fallback-img
+        $sourceNodes = $xpath->query('//picture[@class="player-fallback-img u-hidden"]//source[@srcset]');
+        if ($sourceNodes->length > 0) {
+            $srcset = $sourceNodes->item(0)->getAttribute('srcset');
+            // Extract first URL from srcset (format: "url width, url2 width2")
+            if (preg_match('/^([^\s]+)/', $srcset, $matches)) {
+                return $matches[1];
+            }
+        }
+        
+        // Fallback: try any img within picture.player-fallback-img
+        $imgNodes = $xpath->query('//picture[contains(@class, "player-fallback-img")]//img[@src]');
+        if ($imgNodes->length > 0) {
+            $src = $imgNodes->item(0)->getAttribute('src');
+            if (!empty($src)) {
+                return $src;
+            }
+        }
+        
+        // Strategy 2: Try to find image in recipe-cover div (glide slide)
+        // Look for img within recipe-cover div
+        $coverImgNodes = $xpath->query('//div[contains(@class, "recipe-cover")]//picture//img[@src]');
+        if ($coverImgNodes->length > 0) {
+            // Prefer the second picture (not the blur one) if available
+            // The blur one is usually the first, the main image is usually the second
+            $imgNode = $coverImgNodes->length > 1 ? $coverImgNodes->item(1) : $coverImgNodes->item(0);
+            $src = $imgNode->getAttribute('src');
+            if (!empty($src)) {
+                return $src;
+            }
+        }
+        
+        // Try source element with srcset from recipe-cover
+        $coverSourceNodes = $xpath->query('//div[contains(@class, "recipe-cover")]//picture//source[@srcset]');
+        if ($coverSourceNodes->length > 0) {
+            // Prefer the second source (not the blur one) if available
+            $sourceNode = $coverSourceNodes->length > 1 ? $coverSourceNodes->item(1) : $coverSourceNodes->item(0);
+            $srcset = $sourceNode->getAttribute('srcset');
+            // Extract first URL from srcset (format: "url width, url2 width2")
+            if (preg_match('/^([^\s]+)/', $srcset, $matches)) {
+                return $matches[1];
+            }
+        }
+        
+        // Final fallback: try any picture within recipe-cover (without checking for img tag)
+        $coverPictureNodes = $xpath->query('//div[contains(@class, "recipe-cover")]//picture[not(contains(@class, "recipe-cover-blur"))]//img[@src]');
+        if ($coverPictureNodes->length > 0) {
+            $src = $coverPictureNodes->item(0)->getAttribute('src');
+            if (!empty($src)) {
+                return $src;
+            }
+        }
+        
+        return null;
     }
 
     /**

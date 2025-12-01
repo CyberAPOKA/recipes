@@ -27,6 +27,7 @@ class StoreRecipeRequest extends FormRequest
             'prep_time_minutes' => ['nullable', 'integer', 'min:0'],
             'servings' => ['nullable', 'integer', 'min:1'],
             'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'], // Max 5MB
+            'image_url' => ['nullable', 'url', 'max:500'], // URL da imagem do scraping
             'instructions' => ['required', 'string'],
             'ingredients' => ['nullable', 'string'],
         ];

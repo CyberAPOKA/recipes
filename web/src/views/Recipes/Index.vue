@@ -75,9 +75,16 @@ onMounted(() => {
         <div class="space-y-2">
           <img v-if="recipe.image" :src="recipe.image" :alt="recipe.name || 'Recipe image'"
             class="w-full h-48 object-cover rounded-lg mb-2" />
-          <p v-if="recipe.category" class="badge badge-primary">
-            {{ recipe.category.name }}
-          </p>
+          <div class="flex items-center justify-between gap-4">
+            <p v-if="recipe.category" class="text-lg font-bold">
+              {{ recipe.name }}
+            </p>
+            <div class="w-fit">
+              <p v-if="recipe.category" class="badge badge-primary">
+                {{ recipe.category.name }}
+              </p>
+            </div>
+          </div>
           <div class="flex items-center justify-between gap-4">
             <p v-if="recipe.prep_time_minutes" class="text-sm flex items-center gap-2">
               <FontAwesomeIcon :icon="faClock" /> {{ recipe.prep_time_minutes }} min

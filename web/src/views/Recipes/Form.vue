@@ -38,6 +38,7 @@ const form = ref({
   prep_time_minutes: null,
   servings: null,
   image: null,
+  image_url: null, // URL da imagem do scraping
   instructions: '',
   ingredients: '',
 })
@@ -45,6 +46,7 @@ const form = ref({
 const imagePreview = ref(null)
 const currentImageUrl = ref(null)
 const imageChanged = ref(false)
+const hasScrapedImage = ref(false) // Flag para indicar se a imagem veio do scraping
 const errors = ref({})
 
 const categoryOptions = computed(() => {
@@ -176,6 +178,15 @@ const handleScrapeRecipe = async () => {
         form.value.instructions = scrapedData.instructions
       }
 
+      // Preencher URL da imagem se existir
+      if (scrapedData.image_url) {
+        form.value.image_url = scrapedData.image_url
+        currentImageUrl.value = scrapedData.image_url
+        imagePreview.value = scrapedData.image_url
+        hasScrapedImage.value = true
+        imageChanged.value = true
+      }
+
       // Tentar encontrar e selecionar a categoria correspondente
       if (scrapedData.category_name && categoryStore.categories.length > 0) {
         const matchingCategory = categoryStore.categories.find(cat =>
@@ -213,6 +224,8 @@ const handleImageChange = (event) => {
   const file = event.target.files[0]
   if (file) {
     form.value.image = file
+    form.value.image_url = null // Limpar URL se usuário fizer upload
+    hasScrapedImage.value = false
     imageChanged.value = true
     // Create preview
     const reader = new FileReader()
@@ -225,8 +238,10 @@ const handleImageChange = (event) => {
 
 const removeImage = () => {
   form.value.image = null
+  form.value.image_url = null
   imagePreview.value = null
   currentImageUrl.value = null
+  hasScrapedImage.value = false
   imageChanged.value = true
   // Reset file input
   const fileInput = document.getElementById('recipe-image')
@@ -251,19 +266,25 @@ const handleSubmit = async () => {
     category_id: form.value.category_id || null,
   }
 
-  // Only include image if it was changed
-  if (isEdit.value) {
-    // In edit mode, only send image if it was changed
-    if (!imageChanged.value) {
-      delete data.image
-    } else {
-      // If imageChanged is true but image is null, send null to remove it
-      data.image = form.value.image instanceof File ? form.value.image : null
-    }
+  // Handle image: prioritize uploaded file over URL
+  if (form.value.image instanceof File) {
+    // User uploaded a file, use it and ignore URL
+    data.image = form.value.image
+    delete data.image_url
+  } else if (form.value.image_url) {
+    // Use scraped image URL
+    data.image_url = form.value.image_url
+    delete data.image
   } else {
-    // In create mode, only send image if it's a File
-    if (!(form.value.image instanceof File)) {
+    // No image
+    if (isEdit.value && imageChanged.value) {
+      // In edit mode, if image was removed, send null
+      data.image = null
+      delete data.image_url
+    } else {
+      // Don't send image fields if nothing changed
       delete data.image
+      delete data.image_url
     }
   }
 
@@ -290,17 +311,22 @@ onMounted(async () => {
     const result = await recipeStore.fetchRecipe(route.params.id)
     if (result.success && recipeStore.currentRecipe) {
       const recipe = recipeStore.currentRecipe
+      // Verificar se a imagem é uma URL (do scraping) ou um arquivo local
+      const isImageUrl = recipe.image && (recipe.image.startsWith('http://') || recipe.image.startsWith('https://'))
+
       form.value = {
         category_id: recipe.category_id || null,
         name: recipe.name || '',
         prep_time_minutes: recipe.prep_time_minutes || null,
         servings: recipe.servings || null,
         image: null, // Don't set image file, use URL for preview
+        image_url: isImageUrl ? recipe.image : null,
         instructions: recipe.instructions || '',
         ingredients: recipe.ingredients || '',
       }
       currentImageUrl.value = recipe.image || null
       imagePreview.value = recipe.image || null
+      hasScrapedImage.value = isImageUrl || false
       imageChanged.value = false
     }
   }
@@ -315,6 +341,23 @@ onMounted(async () => {
 
     <Card bordered>
       <form @submit.prevent="handleSubmit" class="space-y-4">
+        <div v-if="!isEdit" class="form-control w-full">
+          <label class="label">
+            <span class="label-text">{{ $t('recipe.scrapeFromUrl') }}</span>
+          </label>
+          <div class="flex gap-2">
+            <input v-model="scrapingUrl" type="url" :placeholder="$t('recipe.urlPlaceholder')"
+              class="input input-bordered flex-1" :disabled="scraping" />
+            <Button type="button" variant="secondary" :disabled="!scrapingUrl.trim() || scraping" :loading="scraping"
+              @click="handleScrapeRecipe">
+              <FontAwesomeIcon v-if="!scraping" :icon="faLink" class="mr-2" />
+              {{ scraping ? $t('recipe.scrapingRecipe') : $t('recipe.scrapeFromUrl') }}
+            </Button>
+          </div>
+          <Alert v-if="scrapingError" type="error" class="mt-2">{{ scrapingError }}</Alert>
+          <Alert v-if="scrapingSuccess" type="success" class="mt-2">{{ $t('recipe.scrapeRecipeSuccess') }}</Alert>
+        </div>
+
         <Select v-model="form.category_id" :options="categoryOptions" :label="$t('recipe.category')"
           placeholder="Selecione uma categoria" :error="getFieldError('category_id')" />
 
@@ -333,23 +376,6 @@ onMounted(async () => {
         <Alert v-if="aiError" type="error">{{ aiError }}</Alert>
         <Alert v-if="aiSuccess" type="success">{{ $t('recipe.generateRecipeSuccess') }}</Alert>
 
-        <div v-if="!isEdit" class="form-control w-full">
-          <label class="label">
-            <span class="label-text">{{ $t('recipe.scrapeFromUrl') }}</span>
-          </label>
-          <div class="flex gap-2">
-            <input v-model="scrapingUrl" type="url" :placeholder="$t('recipe.urlPlaceholder')"
-              class="input input-bordered flex-1" :disabled="scraping" />
-            <Button type="button" variant="secondary" :disabled="!scrapingUrl.trim() || scraping" :loading="scraping"
-              @click="handleScrapeRecipe">
-              <FontAwesomeIcon v-if="!scraping" :icon="faLink" class="mr-2" />
-              {{ scraping ? $t('recipe.scrapingRecipe') : $t('recipe.scrapeFromUrl') }}
-            </Button>
-          </div>
-          <Alert v-if="scrapingError" type="error" class="mt-2">{{ scrapingError }}</Alert>
-          <Alert v-if="scrapingSuccess" type="success" class="mt-2">{{ $t('recipe.scrapeRecipeSuccess') }}</Alert>
-        </div>
-
         <div class="grid grid-cols-2 gap-4">
           <Input v-model.number="form.prep_time_minutes" type="number" :label="$t('recipe.prepTime')"
             :placeholder="$t('recipe.prepTime')" min="0" :error="getFieldError('prep_time_minutes')" />
@@ -362,11 +388,15 @@ onMounted(async () => {
           <label class="label">
             <span class="label-text">{{ $t('recipe.image') }}</span>
           </label>
-          <input id="recipe-image" type="file" accept="image/*" @change="handleImageChange"
+
+          <!-- Input de upload (oculto quando há imagem do scraping) -->
+          <input v-if="!hasScrapedImage" id="recipe-image" type="file" accept="image/*" @change="handleImageChange"
             class="file-input file-input-bordered w-full" :class="{ 'file-input-error': getFieldError('image') }" />
           <div v-if="getFieldError('image')" class="mt-1 text-xs text-error">
             {{ getFieldError('image') }}
           </div>
+
+          <!-- Preview da imagem -->
           <div v-if="imagePreview || currentImageUrl" class="mt-4 relative">
             <img :src="imagePreview || currentImageUrl" alt="Recipe preview"
               class="w-full h-64 object-cover rounded-lg" />

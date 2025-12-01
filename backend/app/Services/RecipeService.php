@@ -48,8 +48,12 @@ class RecipeService
     public function createRecipe(User $user, array $data): Recipe
     {
         $imagePath = null;
+        // Priority: uploaded file > image URL > null
         if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
             $imagePath = $this->storeImage($data['image']);
+        } elseif (isset($data['image_url']) && !empty($data['image_url'])) {
+            // Store image URL directly
+            $imagePath = $data['image_url'];
         }
 
         return Recipe::create([
@@ -78,16 +82,22 @@ class RecipeService
             'ingredients' => $data['ingredients'] ?? $recipe->ingredients,
         ];
 
-        // Handle image upload
+        // Handle image upload or URL
         if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
-            // Delete old image if exists
-            if ($recipe->image) {
+            // Delete old image if exists (only if it's a local file)
+            if ($recipe->image && !$this->isUrl($recipe->image)) {
                 $this->deleteImage($recipe->image);
             }
             $updateData['image'] = $this->storeImage($data['image']);
+        } elseif (isset($data['image_url']) && !empty($data['image_url'])) {
+            // Delete old image if exists (only if it's a local file)
+            if ($recipe->image && !$this->isUrl($recipe->image)) {
+                $this->deleteImage($recipe->image);
+            }
+            $updateData['image'] = $data['image_url'];
         } elseif (isset($data['image']) && $data['image'] === null) {
             // Explicitly remove image
-            if ($recipe->image) {
+            if ($recipe->image && !$this->isUrl($recipe->image)) {
                 $this->deleteImage($recipe->image);
             }
             $updateData['image'] = null;
@@ -101,8 +111,8 @@ class RecipeService
      */
     public function deleteRecipe(Recipe $recipe): bool
     {
-        // Delete associated image if exists
-        if ($recipe->image) {
+        // Delete associated image if exists (only if it's a local file, not a URL)
+        if ($recipe->image && !$this->isUrl($recipe->image)) {
             $this->deleteImage($recipe->image);
         }
 
@@ -125,6 +135,14 @@ class RecipeService
         if (Storage::disk('public')->exists($path)) {
             Storage::disk('public')->delete($path);
         }
+    }
+
+    /**
+     * Check if a string is a URL.
+     */
+    private function isUrl(string $string): bool
+    {
+        return filter_var($string, FILTER_VALIDATE_URL) !== false;
     }
 }
 
