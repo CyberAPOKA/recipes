@@ -5,6 +5,7 @@
     </label>
     <select
       class="select select-bordered w-full"
+      :class="{ 'select-error': error }"
       :value="modelValue === null ? '' : modelValue"
       :disabled="disabled"
       :required="required"
@@ -19,7 +20,10 @@
         {{ option.label }}
       </option>
     </select>
-    <div v-if="hint" class="mt-1 text-xs opacity-70">
+    <div v-if="error" class="mt-1 text-xs text-error">
+      {{ error }}
+    </div>
+    <div v-else-if="hint" class="mt-1 text-xs opacity-70">
       {{ hint }}
     </div>
   </div>
@@ -54,6 +58,10 @@ defineProps({
   required: {
     type: Boolean,
     default: false,
+  },
+  error: {
+    type: String,
+    default: '',
   },
 })
 

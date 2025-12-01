@@ -26,6 +26,7 @@ class UpdateRecipeRequest extends FormRequest
             'name' => ['nullable', 'string', 'max:45'],
             'prep_time_minutes' => ['nullable', 'integer', 'min:0'],
             'servings' => ['nullable', 'integer', 'min:1'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'], // Max 5MB
             'instructions' => ['required', 'string'],
             'ingredients' => ['nullable', 'string'],
         ];

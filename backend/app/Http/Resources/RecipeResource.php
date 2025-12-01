@@ -24,6 +24,7 @@ class RecipeResource extends JsonResource
             'name' => $this->name,
             'prep_time_minutes' => $this->prep_time_minutes,
             'servings' => $this->servings,
+            'image' => $this->image_url,
             'instructions' => $this->instructions,
             'ingredients' => $this->ingredients,
             'created_at' => $this->created_at,

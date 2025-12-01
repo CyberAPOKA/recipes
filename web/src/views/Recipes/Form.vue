@@ -3,9 +3,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipe'
 import { useCategoryStore } from '@/stores/category'
+import { translateValidationError } from '@/utils/validation'
 import Card from '@/components/daisyui/Card.vue'
 import Input from '@/components/daisyui/Input.vue'
-import Textarea from '@/components/daisyui/Textarea.vue'
+import RichTextEditor from '@/components/daisyui/RichTextEditor.vue'
 import Select from '@/components/daisyui/Select.vue'
 import Button from '@/components/daisyui/Button.vue'
 
@@ -22,9 +23,15 @@ const form = ref({
   name: '',
   prep_time_minutes: null,
   servings: null,
+  image: null,
   instructions: '',
   ingredients: '',
 })
+
+const imagePreview = ref(null)
+const currentImageUrl = ref(null)
+const imageChanged = ref(false)
+const errors = ref({})
 
 const categoryOptions = computed(() => {
   return [
@@ -36,10 +43,62 @@ const categoryOptions = computed(() => {
   ]
 })
 
+const handleImageChange = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    form.value.image = file
+    imageChanged.value = true
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      imagePreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const removeImage = () => {
+  form.value.image = null
+  imagePreview.value = null
+  currentImageUrl.value = null
+  imageChanged.value = true
+  // Reset file input
+  const fileInput = document.getElementById('recipe-image')
+  if (fileInput) {
+    fileInput.value = ''
+  }
+}
+
+const getFieldError = (field) => {
+  if (errors.value[field] && errors.value[field].length > 0) {
+    return translateValidationError(errors.value[field][0], field)
+  }
+  return ''
+}
+
 const handleSubmit = async () => {
+  // Limpar erros anteriores
+  errors.value = {}
+
   const data = {
     ...form.value,
     category_id: form.value.category_id || null,
+  }
+
+  // Only include image if it was changed
+  if (isEdit.value) {
+    // In edit mode, only send image if it was changed
+    if (!imageChanged.value) {
+      delete data.image
+    } else {
+      // If imageChanged is true but image is null, send null to remove it
+      data.image = form.value.image instanceof File ? form.value.image : null
+    }
+  } else {
+    // In create mode, only send image if it's a File
+    if (!(form.value.image instanceof File)) {
+      delete data.image
+    }
   }
 
   let result
@@ -50,7 +109,11 @@ const handleSubmit = async () => {
   }
 
   if (result.success) {
+    errors.value = {}
     router.push('/recipes')
+  } else if (result.errors) {
+    // Capturar erros de validação
+    errors.value = result.errors
   }
 }
 
@@ -66,9 +129,13 @@ onMounted(async () => {
         name: recipe.name || '',
         prep_time_minutes: recipe.prep_time_minutes || null,
         servings: recipe.servings || null,
+        image: null, // Don't set image file, use URL for preview
         instructions: recipe.instructions || '',
         ingredients: recipe.ingredients || '',
       }
+      currentImageUrl.value = recipe.image || null
+      imagePreview.value = recipe.image || null
+      imageChanged.value = false
     }
   }
 })
@@ -83,23 +150,42 @@ onMounted(async () => {
     <Card bordered>
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <Select v-model="form.category_id" :options="categoryOptions" :label="$t('recipe.category')"
-          placeholder="Selecione uma categoria" />
+          placeholder="Selecione uma categoria" :error="getFieldError('category_id')" />
 
-        <Input v-model="form.name" type="text" :label="$t('recipe.name')" :placeholder="$t('recipe.name')" />
+        <Input v-model="form.name" type="text" :label="$t('recipe.name')" :placeholder="$t('recipe.name')"
+          :error="getFieldError('name')" />
 
         <div class="grid grid-cols-2 gap-4">
           <Input v-model.number="form.prep_time_minutes" type="number" :label="$t('recipe.prepTime')"
-            :placeholder="$t('recipe.prepTime')" min="0" />
+            :placeholder="$t('recipe.prepTime')" min="0" :error="getFieldError('prep_time_minutes')" />
 
           <Input v-model.number="form.servings" type="number" :label="$t('recipe.servings')"
-            :placeholder="$t('recipe.servings')" min="1" />
+            :placeholder="$t('recipe.servings')" min="1" :error="getFieldError('servings')" />
         </div>
 
-        <Textarea v-model="form.ingredients" :label="$t('recipe.ingredients')" :placeholder="$t('recipe.ingredients')"
-          :rows="5" />
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text">{{ $t('recipe.image') }}</span>
+          </label>
+          <input id="recipe-image" type="file" accept="image/*" @change="handleImageChange"
+            class="file-input file-input-bordered w-full" :class="{ 'file-input-error': getFieldError('image') }" />
+          <div v-if="getFieldError('image')" class="mt-1 text-xs text-error">
+            {{ getFieldError('image') }}
+          </div>
+          <div v-if="imagePreview || currentImageUrl" class="mt-4 relative">
+            <img :src="imagePreview || currentImageUrl" alt="Recipe preview"
+              class="w-full h-64 object-cover rounded-lg" />
+            <button type="button" @click="removeImage" class="btn btn-sm btn-error absolute top-2 right-2">
+              ✕
+            </button>
+          </div>
+        </div>
 
-        <Textarea v-model="form.instructions" :label="$t('recipe.instructions')"
-          :placeholder="$t('recipe.instructions')" :rows="8" required />
+        <RichTextEditor v-model="form.ingredients" :label="$t('recipe.ingredients')"
+          :placeholder="$t('recipe.ingredients')" :error="getFieldError('ingredients')" />
+
+        <RichTextEditor v-model="form.instructions" :label="$t('recipe.instructions')"
+          :placeholder="$t('recipe.instructions')" required :error="getFieldError('instructions')" />
 
         <div class="flex gap-4">
           <Button type="submit" variant="primary" :loading="loading">

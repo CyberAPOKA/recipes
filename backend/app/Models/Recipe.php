@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Recipe extends Model
 {
@@ -18,6 +19,7 @@ class Recipe extends Model
         'name',
         'prep_time_minutes',
         'servings',
+        'image',
         'instructions',
         'ingredients',
     ];
@@ -36,5 +38,25 @@ class Recipe extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Get the full URL for the recipe image.
+     *
+     * @return string|null
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if (!$this->image) {
+            return null;
+        }
+
+        // Check if it's already a full URL
+        if (filter_var($this->image, FILTER_VALIDATE_URL)) {
+            return $this->image;
+        }
+
+        // Return the full URL using Storage facade
+        return Storage::disk('public')->url($this->image);
     }
 }

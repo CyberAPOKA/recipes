@@ -62,7 +62,8 @@ export const useRecipeStore = defineStore('recipe', () => {
       return { success: true, data: response.data.data }
     } catch (err) {
       error.value = err.response?.data?.message || 'Error creating recipe'
-      return { success: false, message: error.value }
+      const validationErrors = err.response?.data?.errors || {}
+      return { success: false, message: error.value, errors: validationErrors }
     } finally {
       loading.value = false
     }
@@ -84,7 +85,8 @@ export const useRecipeStore = defineStore('recipe', () => {
       return { success: true, data: response.data.data }
     } catch (err) {
       error.value = err.response?.data?.message || 'Error updating recipe'
-      return { success: false, message: error.value }
+      const validationErrors = err.response?.data?.errors || {}
+      return { success: false, message: error.value, errors: validationErrors }
     } finally {
       loading.value = false
     }

@@ -1,10 +1,3 @@
-<template>
-    <button :class="buttonClasses" :disabled="disabled" @click="$emit('click', $event)">
-        <slot name="icon" />
-        <slot />
-    </button>
-</template>
-
 <script setup>
 import { computed } from 'vue'
 
@@ -60,56 +53,23 @@ const props = defineProps({
 const emit = defineEmits(['click'])
 
 const buttonClasses = computed(() => {
-    const classes = ['btn']
+    const variant = props.outline ? `btn-outline btn-${props.variant}` : `btn-${props.variant}`
+    const size = props.size !== 'md' ? `btn-${props.size}` : ''
+    const shape = props.shape === 'square' ? 'btn-square' : props.shape === 'circle' ? 'btn-circle' : ''
+    const active = props.active ? 'btn-active' : ''
+    const loading = props.loading ? 'loading' : ''
+    const wide = props.wide ? 'btn-wide' : ''
+    const block = props.block ? 'btn-block' : ''
+    const fancy = props.fancy
+        ? 'relative overflow-hidden transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] ring-2 ring-current/30 hover:ring-current/50 shadow-lg hover:shadow-xl before:content-[""] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700'
+        : ''
 
-    // Variant
-    if (props.outline) {
-        classes.push(`btn-outline`)
-    }
-    classes.push(`btn-${props.variant}`)
-
-    // Size
-    if (props.size !== 'md') {
-        classes.push(`btn-${props.size}`)
-    }
-
-    // Shape
-    if (props.shape === 'square') {
-        classes.push('btn-square')
-    } else if (props.shape === 'circle') {
-        classes.push('btn-circle')
-    }
-
-    // States
-    if (props.active) {
-        classes.push('btn-active')
-    }
-
-    if (props.loading) {
-        classes.push('loading')
-    }
-
-    if (props.wide) {
-        classes.push('btn-wide')
-    }
-
-    if (props.block) {
-        classes.push('btn-block')
-    }
-
-    // Fancy style (keeps DaisyUI theming via currentColor/ring-current)
-    if (props.fancy) {
-        classes.push(
-            'relative overflow-hidden transition-transform duration-300',
-            'hover:scale-[1.02] active:scale-[0.98]',
-            'ring-2 ring-current/30 hover:ring-current/50',
-            'shadow-lg hover:shadow-xl',
-            'before:content-[""] before:absolute before:inset-0',
-            'before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent',
-            'before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700'
-        )
-    }
-
-    return classes.join(' ')
+    return `btn ${variant} ${size} ${shape} ${active} ${loading} ${wide} ${block} ${fancy}`.replace(/\s+/g, ' ').trim()
 })
 </script>
+<template>
+    <button :class="buttonClasses" :disabled="disabled" @click="$emit('click', $event)">
+        <slot name="icon" />
+        <slot />
+    </button>
+</template>

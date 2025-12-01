@@ -6,6 +6,8 @@ use App\Models\Recipe;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class RecipeService
 {
@@ -45,12 +47,18 @@ class RecipeService
      */
     public function createRecipe(User $user, array $data): Recipe
     {
+        $imagePath = null;
+        if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
+            $imagePath = $this->storeImage($data['image']);
+        }
+
         return Recipe::create([
             'user_id' => $user->id,
             'category_id' => $data['category_id'] ?? null,
             'name' => $data['name'] ?? null,
             'prep_time_minutes' => $data['prep_time_minutes'] ?? null,
             'servings' => $data['servings'] ?? null,
+            'image' => $imagePath,
             'instructions' => $data['instructions'],
             'ingredients' => $data['ingredients'] ?? null,
         ]);
@@ -61,14 +69,31 @@ class RecipeService
      */
     public function updateRecipe(Recipe $recipe, array $data): bool
     {
-        return $recipe->update([
+        $updateData = [
             'category_id' => $data['category_id'] ?? $recipe->category_id,
             'name' => $data['name'] ?? $recipe->name,
             'prep_time_minutes' => $data['prep_time_minutes'] ?? $recipe->prep_time_minutes,
             'servings' => $data['servings'] ?? $recipe->servings,
             'instructions' => $data['instructions'] ?? $recipe->instructions,
             'ingredients' => $data['ingredients'] ?? $recipe->ingredients,
-        ]);
+        ];
+
+        // Handle image upload
+        if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
+            // Delete old image if exists
+            if ($recipe->image) {
+                $this->deleteImage($recipe->image);
+            }
+            $updateData['image'] = $this->storeImage($data['image']);
+        } elseif (isset($data['image']) && $data['image'] === null) {
+            // Explicitly remove image
+            if ($recipe->image) {
+                $this->deleteImage($recipe->image);
+            }
+            $updateData['image'] = null;
+        }
+
+        return $recipe->update($updateData);
     }
 
     /**
@@ -76,7 +101,30 @@ class RecipeService
      */
     public function deleteRecipe(Recipe $recipe): bool
     {
+        // Delete associated image if exists
+        if ($recipe->image) {
+            $this->deleteImage($recipe->image);
+        }
+
         return $recipe->delete();
+    }
+
+    /**
+     * Store uploaded image and return the path.
+     */
+    private function storeImage(UploadedFile $file): string
+    {
+        return $file->store('recipes', 'public');
+    }
+
+    /**
+     * Delete image from storage.
+     */
+    private function deleteImage(string $path): void
+    {
+        if (Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }
 

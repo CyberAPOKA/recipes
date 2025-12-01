@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useRecipeStore } from '@/stores/recipe'
 import { useI18n } from 'vue-i18n'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faClock, faUsers } from '@fortawesome/free-solid-svg-icons'
 import Card from '@/components/daisyui/Card.vue'
 import Input from '@/components/daisyui/Input.vue'
 import Button from '@/components/daisyui/Button.vue'
@@ -71,16 +73,22 @@ onMounted(() => {
           {{ recipe.name || $t('recipe.title') }}
         </template>
         <div class="space-y-2" @click="$router.push(`/recipes/${recipe.id}`)">
+          <img v-if="recipe.image" :src="recipe.image" :alt="recipe.name || 'Recipe image'"
+            class="w-full h-48 object-cover rounded-lg mb-2" />
           <p v-if="recipe.category" class="badge badge-primary">
             {{ recipe.category.name }}
           </p>
-          <p v-if="recipe.prep_time_minutes" class="text-sm">
-            ⏱️ {{ recipe.prep_time_minutes }} min
-          </p>
-          <p v-if="recipe.servings" class="text-sm">
-            👥 {{ recipe.servings }}
-          </p>
-          <p class="text-sm line-clamp-3">{{ recipe.instructions }}</p>
+          <div class="flex items-center justify-between gap-4">
+            <p v-if="recipe.prep_time_minutes" class="text-sm flex items-center gap-2">
+              <FontAwesomeIcon :icon="faClock" /> {{ recipe.prep_time_minutes }} min
+            </p>
+            <p v-if="recipe.servings" class="text-sm flex items-center gap-2">
+              <FontAwesomeIcon :icon="faUsers" /> {{ recipe.servings }} {{ $t('recipe.servings') }}
+            </p>
+          </div>
+          <div
+            class="text-sm prose prose-sm max-w-none overflow-hidden [&_h1]:text-lg [&_h1]:font-bold [&_h1]:my-1 [&_h2]:text-base [&_h2]:font-bold [&_h2]:my-1 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:my-1 [&_p]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:my-1 [&_li]:my-0.5 recipe-preview"
+            v-html="recipe.instructions"></div>
         </div>
         <template #actions>
           <Button variant="ghost" size="sm" @click.stop="$router.push(`/recipes/${recipe.id}/edit`)">
@@ -110,3 +118,14 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.recipe-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-height: 4.5rem;
+}
+</style>

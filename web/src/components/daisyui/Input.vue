@@ -3,9 +3,12 @@
         <label v-if="label" class="block mb-1">
             <span class="label-text">{{ label }}</span>
         </label>
-        <input :type="type" class="input input-bordered w-full" :placeholder="placeholder" :value="modelValue"
+        <input :type="type" class="input input-bordered w-full" :class="{ 'input-error': error }" :placeholder="placeholder" :value="modelValue"
             :disabled="disabled" :required="required" @input="$emit('update:modelValue', $event.target.value)" />
-        <div v-if="hint" class="mt-1 text-xs opacity-70">
+        <div v-if="error" class="mt-1 text-xs text-error">
+            {{ error }}
+        </div>
+        <div v-else-if="hint" class="mt-1 text-xs opacity-70">
             {{ hint }}
         </div>
     </div>
@@ -42,6 +45,10 @@ const props = defineProps({
     required: {
         type: Boolean,
         default: false
+    },
+    error: {
+        type: String,
+        default: ''
     }
 })
 
