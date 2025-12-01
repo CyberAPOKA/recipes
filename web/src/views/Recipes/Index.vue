@@ -68,11 +68,11 @@ onMounted(() => {
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <Card v-for="recipe in recipes" :key="recipe.id" class="hover:shadow-2xl transition-shadow cursor-pointer"
-        bordered>
+        bordered @click="$router.push(`/recipes/${recipe.id}`)">
         <template #title>
           {{ recipe.name || $t('recipe.title') }}
         </template>
-        <div class="space-y-2" @click="$router.push(`/recipes/${recipe.id}`)">
+        <div class="space-y-2">
           <img v-if="recipe.image" :src="recipe.image" :alt="recipe.name || 'Recipe image'"
             class="w-full h-48 object-cover rounded-lg mb-2" />
           <p v-if="recipe.category" class="badge badge-primary">
