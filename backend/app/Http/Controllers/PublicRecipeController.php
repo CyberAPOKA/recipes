@@ -6,6 +6,7 @@ use App\Http\Resources\RecipeResource;
 use App\Services\RecipeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class PublicRecipeController extends Controller
 {
@@ -19,6 +20,31 @@ class PublicRecipeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        // Try to authenticate user if token is present (optional auth)
+        $user = null;
+        $token = $request->bearerToken();
+        if ($token) {
+            $accessToken = PersonalAccessToken::findToken($token);
+            if ($accessToken) {
+                $user = $accessToken->tokenable;
+            }
+        }
+        
+        // Convert my_recipes from string '1'/'0' to boolean
+        $myRecipesValue = $request->query('my_recipes');
+        $myRecipes = false;
+        if ($myRecipesValue !== null) {
+            $myRecipes = in_array(strtolower($myRecipesValue), ['1', 'true', 'yes'], true);
+        }
+        
+        \Log::info('PublicRecipeController - my_recipes filter', [
+            'raw_value' => $myRecipesValue,
+            'converted_value' => $myRecipes,
+            'user_id' => $user?->id,
+            'is_authenticated' => $user !== null,
+            'has_token' => $token !== null,
+        ]);
+        
         $filters = [
             'category_id' => $request->query('category_id'),
             'servings' => [
@@ -29,19 +55,31 @@ class PublicRecipeController extends Controller
                 'operator' => $request->query('prep_time_operator'), // 'exact', 'above', 'below'
                 'value' => $request->query('prep_time_value'),
             ],
-            'my_recipes' => $request->boolean('my_recipes'),
+            'rating' => [
+                'operator' => $request->query('rating_operator'), // 'exact', 'above', 'below'
+                'value' => $request->query('rating_value'),
+            ],
+            'comments' => [
+                'operator' => $request->query('comments_operator'), // 'exact', 'above', 'below'
+                'value' => $request->query('comments_value'),
+            ],
+            'my_recipes' => $myRecipes,
             'search' => $request->query('search'),
         ];
 
-        // Remove empty filter values
-        $filters = array_filter($filters, function ($value) {
+        // Remove empty filter values (but keep my_recipes even if false)
+        $filters = array_filter($filters, function ($key, $value) {
+            // Keep my_recipes filter even if false (it's a boolean filter)
+            if ($key === 'my_recipes') {
+                return true;
+            }
             if (is_array($value)) {
                 return !empty(array_filter($value));
             }
             return $value !== null && $value !== '';
-        });
+        }, ARRAY_FILTER_USE_BOTH);
 
-        $recipes = $this->recipeService->getPublicRecipes($filters, $request->user());
+        $recipes = $this->recipeService->getPublicRecipes($filters, $user);
 
         return response()->json([
             'data' => RecipeResource::collection($recipes->items()),

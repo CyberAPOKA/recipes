@@ -15,6 +15,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/categories', [CategoryController::class, 'index']);
 
 // Public recipe routes (accessible without auth, but auth optional for filters)
+// Note: Sanctum middleware will authenticate user if token is present, but requires token
+// For optional auth, we'll handle it in the controller
 Route::get('/public/recipes', [PublicRecipeController::class, 'index']);
 Route::get('/public/recipes/{id}', [PublicRecipeController::class, 'show']);
 

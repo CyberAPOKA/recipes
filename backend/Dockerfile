@@ -3,7 +3,7 @@ FROM php:8.2-cli
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies
+# Install system dependencies and build tools
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -14,7 +14,17 @@ RUN apt-get update && apt-get install -y \
     unzip \
     nodejs \
     npm \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
+    libzip-dev \
+    pkg-config \
+    build-essential \
+    autoconf \
+    libtool \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && rm -rf /tmp/pear \
+    && apt-get remove -y build-essential autoconf libtool \
+    && apt-get autoremove -y \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer

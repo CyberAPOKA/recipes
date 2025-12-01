@@ -7,6 +7,7 @@ use App\Http\Requests\Recipe\StoreRecipeRequest;
 use App\Http\Requests\Recipe\UpdateRecipeRequest;
 use App\Http\Resources\RecipeResource;
 use App\Models\Recipe;
+use App\Services\CacheService;
 use App\Services\RecipeService;
 use App\Services\RecipeScraperService;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,8 @@ class RecipeController extends Controller
 {
     public function __construct(
         private RecipeService $recipeService,
-        private RecipeScraperService $scraperService
+        private RecipeScraperService $scraperService,
+        private CacheService $cacheService
     ) {
     }
 
@@ -25,42 +27,43 @@ class RecipeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // Check if filters are provided (new format) or just search (old format for backward compatibility)
-        $hasFilters = $request->has(['category_id', 'servings_operator', 'servings_value', 'prep_time_operator', 'prep_time_value']) 
-            || $request->has('category_id') 
-            || $request->has('servings_operator') 
-            || $request->has('prep_time_operator');
+        // Always build filters array to support all filter types
+        $filters = [
+            'category_id' => $request->query('category_id'),
+            'servings' => [
+                'operator' => $request->query('servings_operator'),
+                'value' => $request->query('servings_value'),
+            ],
+            'prep_time' => [
+                'operator' => $request->query('prep_time_operator'),
+                'value' => $request->query('prep_time_value'),
+            ],
+            'rating' => [
+                'operator' => $request->query('rating_operator'),
+                'value' => $request->query('rating_value'),
+            ],
+            'comments' => [
+                'operator' => $request->query('comments_operator'),
+                'value' => $request->query('comments_value'),
+            ],
+            'my_recipes' => $request->boolean('my_recipes'),
+            'search' => $request->query('search'),
+        ];
 
-        if ($hasFilters) {
-            $filters = [
-                'category_id' => $request->query('category_id'),
-                'servings' => [
-                    'operator' => $request->query('servings_operator'),
-                    'value' => $request->query('servings_value'),
-                ],
-                'prep_time' => [
-                    'operator' => $request->query('prep_time_operator'),
-                    'value' => $request->query('prep_time_value'),
-                ],
-                'search' => $request->query('search'),
-            ];
+        // Remove empty filter values (but keep my_recipes even if false)
+        $filters = array_filter($filters, function ($key, $value) {
+            // Keep my_recipes filter even if false (it's a boolean filter)
+            if ($key === 'my_recipes') {
+                return true;
+            }
+            if (is_array($value)) {
+                return !empty(array_filter($value));
+            }
+            return $value !== null && $value !== '';
+        }, ARRAY_FILTER_USE_BOTH);
 
-            // Remove empty filter values
-            $filters = array_filter($filters, function ($value) {
-                if (is_array($value)) {
-                    return !empty(array_filter($value));
-                }
-                return $value !== null && $value !== '';
-            });
-
-            // Use getPublicRecipes to return all recipes (not filtered by user)
-            $recipes = $this->recipeService->getPublicRecipes($filters, $request->user());
-        } else {
-            // Backward compatibility: use public recipes method with just search
-            $search = $request->query('search');
-            $filters = $search ? ['search' => $search] : [];
-            $recipes = $this->recipeService->getPublicRecipes($filters, $request->user());
-        }
+        // Use getPublicRecipes to return recipes (filtered by user if my_recipes is true)
+        $recipes = $this->recipeService->getPublicRecipes($filters, $request->user());
 
         return response()->json([
             'data' => RecipeResource::collection($recipes->items()),
@@ -82,6 +85,9 @@ class RecipeController extends Controller
             $request->user(),
             $request->validated()
         );
+
+        // Invalidate cache when a new recipe is created
+        $this->cacheService->invalidateRecipeCache($recipe->id);
 
         return response()->json([
             'message' => 'Recipe created successfully',
@@ -122,6 +128,9 @@ class RecipeController extends Controller
 
         $this->recipeService->updateRecipe($recipe, $request->validated());
 
+        // Invalidate cache when a recipe is updated
+        $this->cacheService->invalidateRecipeCache($recipe->id);
+
         return response()->json([
             'message' => 'Recipe updated successfully',
             'data' => new RecipeResource($recipe->fresh()->load('category')),
@@ -141,7 +150,11 @@ class RecipeController extends Controller
             ], 404);
         }
 
+        $recipeId = $recipe->id;
         $this->recipeService->deleteRecipe($recipe);
+
+        // Invalidate cache when a recipe is deleted
+        $this->cacheService->invalidateRecipeCache($recipeId);
 
         return response()->json([
             'message' => 'Recipe deleted successfully',

@@ -40,7 +40,7 @@ const handleDeleteConfirm = async () => {
 
   if (result.success) {
     showDeleteModal.value = false
-    router.push('/recipes')
+    router.push('/')
   }
 }
 
@@ -120,7 +120,7 @@ watch(() => route.params.id, () => {
 
     <div v-else class="text-center py-8">
       <p>{{ $t('recipe.noRecipes') }}</p>
-      <Button variant="primary" @click="$router.push('/recipes')" class="mt-4">
+      <Button variant="primary" @click="$router.push('/')" class="mt-4">
         {{ $t('common.back') }}
       </Button>
     </div>

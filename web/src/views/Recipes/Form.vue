@@ -297,7 +297,7 @@ const handleSubmit = async () => {
 
   if (result.success) {
     errors.value = {}
-    router.push('/recipes')
+    router.push('/')
   } else if (result.errors) {
     // Capturar erros de validação
     errors.value = result.errors

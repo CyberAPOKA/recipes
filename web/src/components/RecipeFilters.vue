@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useCategoryStore } from '@/stores/category'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faFilter } from '@fortawesome/free-solid-svg-icons'
@@ -23,6 +23,31 @@ const emit = defineEmits(['update:modelValue', 'clear', 'apply'])
 
 const categoryStore = useCategoryStore()
 
+// Local search value for debouncing
+const localSearch = ref(props.modelValue.search || '')
+
+// Debounce timer for search input
+let searchDebounceTimer = null
+const DEBOUNCE_DELAY = 500 // milliseconds (1 second)
+
+// Watch for external changes to search (e.g., when filters are cleared)
+watch(() => props.modelValue.search, (newValue) => {
+  if (newValue !== localSearch.value) {
+    localSearch.value = newValue || ''
+  }
+})
+
+// Debounced search update
+watch(localSearch, (newValue) => {
+  clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(() => {
+    // Update the modelValue with the debounced search value
+    emit('update:modelValue', { ...props.modelValue, search: newValue })
+    // Trigger the search
+    emit('apply')
+  }, DEBOUNCE_DELAY)
+})
+
 const categoryOptions = computed(() => {
   return [
     { value: null, label: 'Todas as categorias' },
@@ -39,15 +64,40 @@ const operatorOptions = [
   { value: 'below', label: 'Abaixo de' },
 ]
 
+const sortOptions = [
+  { value: 'recent', label: 'Mais recentes' },
+  { value: 'oldest', label: 'Mais antigos' },
+  { value: 'rating_desc', label: 'Melhores avaliados' },
+  { value: 'rating_asc', label: 'Piores avaliados' },
+  { value: 'comments_desc', label: 'Mais comentados' },
+  { value: 'comments_asc', label: 'Menos comentados' },
+  { value: 'name_asc', label: 'Nome A-Z' },
+  { value: 'name_desc', label: 'Nome Z-A' },
+]
+
 const updateFilter = (key, value) => {
+  // For search, update local value (which will trigger debounced watch)
+  if (key === 'search') {
+    localSearch.value = value || ''
+    return
+  }
+
+  // For other filters, update immediately
   emit('update:modelValue', { ...props.modelValue, [key]: value })
 }
 
 const clearFilters = () => {
+  // Clear any pending debounce timer
+  clearTimeout(searchDebounceTimer)
+  localSearch.value = ''
   emit('clear')
 }
 
 const applyFilters = () => {
+  // Clear any pending debounce timer and apply immediately
+  clearTimeout(searchDebounceTimer)
+  // Update search value immediately
+  emit('update:modelValue', { ...props.modelValue, search: localSearch.value })
   emit('apply')
 }
 </script>
@@ -66,35 +116,21 @@ const applyFilters = () => {
     <div class="space-y-4">
       <!-- Search -->
       <div>
-        <Input 
-          :model-value="modelValue.search || ''" 
-          @update:model-value="updateFilter('search', $event)"
-          type="text" 
-          placeholder="Buscar receitas..." 
-          @input="applyFilters" 
-        />
+        <Input v-model="localSearch" type="text" placeholder="Buscar receitas..." />
       </div>
 
       <!-- Category Filter -->
       <div>
-        <Select 
-          :model-value="modelValue.categoryId || null" 
-          @update:model-value="updateFilter('categoryId', $event)"
-          :options="categoryOptions" 
-          label="Categoria" 
-        />
+        <Select :model-value="modelValue.categoryId || null" @update:model-value="updateFilter('categoryId', $event)"
+          :options="categoryOptions" label="Categoria" />
       </div>
 
       <!-- My Recipes Filter -->
       <div v-if="showMyRecipes" class="form-control">
         <label class="label cursor-pointer">
           <span class="label-text">Mostrar apenas minhas receitas</span>
-          <input 
-            :checked="modelValue.myRecipes || false"
-            @change="updateFilter('myRecipes', $event.target.checked)"
-            type="checkbox" 
-            class="checkbox checkbox-primary" 
-          />
+          <input :checked="modelValue.myRecipes || false" @change="updateFilter('myRecipes', $event.target.checked)"
+            type="checkbox" class="checkbox checkbox-primary" />
         </label>
       </div>
 
@@ -104,20 +140,11 @@ const applyFilters = () => {
           <span class="label-text">Porções</span>
         </label>
         <div class="flex gap-2">
-          <Select 
-            :model-value="modelValue.servingsOperator || 'exact'" 
-            @update:model-value="updateFilter('servingsOperator', $event)"
-            :options="operatorOptions" 
-            class="w-fit" 
-          />
-          <Input 
-            :model-value="modelValue.servingsValue || ''" 
-            @update:model-value="updateFilter('servingsValue', $event ? Number($event) : null)"
-            type="number" 
-            placeholder="Qtd" 
-            min="1" 
-            class="flex-1" 
-          />
+          <Select :model-value="modelValue.servingsOperator || 'exact'"
+            @update:model-value="updateFilter('servingsOperator', $event)" :options="operatorOptions" />
+          <Input :model-value="modelValue.servingsValue || ''"
+            @update:model-value="updateFilter('servingsValue', $event ? Number($event) : null)" type="number"
+            placeholder="Qtd" min="1" />
         </div>
       </div>
 
@@ -127,23 +154,54 @@ const applyFilters = () => {
           <span class="label-text">Tempo (min)</span>
         </label>
         <div class="flex gap-2">
-          <Select 
-            :model-value="modelValue.prepTimeOperator || 'exact'" 
-            @update:model-value="updateFilter('prepTimeOperator', $event)"
-            :options="operatorOptions" 
-            class="w-fit" 
-          />
-          <Input 
-            :model-value="modelValue.prepTimeValue || ''" 
-            @update:model-value="updateFilter('prepTimeValue', $event ? Number($event) : null)"
-            type="number" 
-            placeholder="Min" 
-            min="1" 
-            class="flex-1" 
-          />
+          <Select :model-value="modelValue.prepTimeOperator || 'exact'"
+            @update:model-value="updateFilter('prepTimeOperator', $event)" :options="operatorOptions" />
+          <Input :model-value="modelValue.prepTimeValue || ''"
+            @update:model-value="updateFilter('prepTimeValue', $event ? Number($event) : null)" type="number"
+            placeholder="Min" min="1" />
         </div>
+      </div>
+
+      <!-- Rating Filter -->
+      <div>
+        <label class="label">
+          <span class="label-text">Avaliação</span>
+        </label>
+        <div class="flex gap-2">
+          <Select :model-value="modelValue.ratingOperator || 'exact'"
+            @update:model-value="updateFilter('ratingOperator', $event)" :options="operatorOptions" />
+          <Input :model-value="modelValue.ratingValue || ''"
+            @update:model-value="updateFilter('ratingValue', $event ? Number($event) : null)" type="number"
+            placeholder="Nota" min="1" max="5" step="0.1" />
+        </div>
+      </div>
+
+      <!-- Comments Filter -->
+      <div>
+        <label class="label">
+          <span class="label-text">Comentários</span>
+        </label>
+        <div class="flex gap-2">
+          <Select :model-value="modelValue.commentsOperator || 'exact'"
+            @update:model-value="updateFilter('commentsOperator', $event)" :options="operatorOptions" />
+          <Input :model-value="modelValue.commentsValue || ''"
+            @update:model-value="updateFilter('commentsValue', $event ? Number($event) : null)" type="number"
+            placeholder="Qtd" min="0" />
+        </div>
+      </div>
+
+      <!-- Sort By -->
+      <div>
+        <Select :model-value="modelValue.sortBy || 'recent'" @update:model-value="updateFilter('sortBy', $event)"
+          :options="sortOptions" label="Ordenar por" />
+      </div>
+
+      <!-- Clear Filters Button -->
+      <div class="pt-2">
+        <Button variant="outline" class="w-full" @click="clearFilters">
+          Limpar Filtros
+        </Button>
       </div>
     </div>
   </Card>
 </template>
-

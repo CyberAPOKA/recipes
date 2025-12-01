@@ -21,6 +21,17 @@ const prepareFormData = (data) => {
 export const recipeApi = {
   getAll: (search = '', page = 1, filters = {}) => {
     const params = { page }
+    
+    // Add per_page if provided
+    if (filters.perPage) {
+      params.per_page = filters.perPage
+    }
+    
+    // Add sort_by if provided
+    if (filters.sortBy) {
+      params.sort_by = filters.sortBy
+    }
+    
     if (search) {
       params.search = search
     }
@@ -36,8 +47,20 @@ export const recipeApi = {
       params.prep_time_operator = filters.prepTimeOperator || 'exact'
       params.prep_time_value = filters.prepTimeValue
     }
+    if (filters.ratingValue !== null && filters.ratingValue !== undefined) {
+      params.rating_operator = filters.ratingOperator || 'exact'
+      params.rating_value = filters.ratingValue
+    }
+    if (filters.commentsValue !== null && filters.commentsValue !== undefined) {
+      params.comments_operator = filters.commentsOperator || 'exact'
+      params.comments_value = filters.commentsValue
+    }
     if (filters.search) {
       params.search = filters.search
+    }
+    // Add my_recipes filter if provided (always pass it when it's a boolean)
+    if (filters.myRecipes !== undefined && filters.myRecipes !== null) {
+      params.my_recipes = filters.myRecipes ? '1' : '0'
     }
     return api.get('/recipes', { params })
   },

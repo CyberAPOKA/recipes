@@ -68,7 +68,11 @@ defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const handleChange = (event) => {
-  const value = event.target.value === '' ? null : event.target.value
+  let value = event.target.value === '' ? null : event.target.value
+  // Try to convert to number if it's a numeric string
+  if (value !== null && !isNaN(value) && !isNaN(parseFloat(value))) {
+    value = Number(value)
+  }
   emit('update:modelValue', value)
 }
 </script>

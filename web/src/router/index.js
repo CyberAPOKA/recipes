@@ -15,12 +15,6 @@ const routes = [
     meta: { requiresAuth: false },
   },
   {
-    path: '/recipes',
-    name: 'Recipes',
-    component: () => import('../views/Recipes/Index.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/recipes/create',
     name: 'RecipeCreate',
     component: () => import('../views/Recipes/Form.vue'),
