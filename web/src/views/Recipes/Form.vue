@@ -3,20 +3,29 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipeStore } from '@/stores/recipe'
 import { useCategoryStore } from '@/stores/category'
+import { useI18n } from 'vue-i18n'
 import { translateValidationError } from '@/utils/validation'
+import { generateRecipeWithAI } from '@/services/openai'
 import Card from '@/components/daisyui/Card.vue'
 import Input from '@/components/daisyui/Input.vue'
 import RichTextEditor from '@/components/daisyui/RichTextEditor.vue'
 import Select from '@/components/daisyui/Select.vue'
 import Button from '@/components/daisyui/Button.vue'
+import Alert from '@/components/daisyui/Alert.vue'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons'
 
 const route = useRoute()
 const router = useRouter()
 const recipeStore = useRecipeStore()
 const categoryStore = useCategoryStore()
+const { t } = useI18n()
 
 const isEdit = computed(() => !!route.params.id)
 const loading = computed(() => recipeStore.loading)
+const generatingAI = ref(false)
+const aiError = ref(null)
+const aiSuccess = ref(false)
 
 const form = ref({
   category_id: null,
@@ -42,6 +51,88 @@ const categoryOptions = computed(() => {
     })),
   ]
 })
+
+const selectedCategory = computed(() => {
+  if (!form.value.category_id) return null
+  // Garantir comparação correta de IDs (pode ser string ou número)
+  return categoryStore.categories.find(cat =>
+    String(cat.id) === String(form.value.category_id) ||
+    Number(cat.id) === Number(form.value.category_id)
+  )
+})
+
+const canGenerateAI = computed(() => {
+  return !isEdit.value && !!form.value.category_id && !generatingAI.value
+})
+
+const handleGenerateWithAI = async () => {
+  if (!canGenerateAI.value) return
+
+  generatingAI.value = true
+  aiError.value = null
+  aiSuccess.value = false
+
+  try {
+    // Garantir que as categorias foram carregadas
+    if (categoryStore.categories.length === 0) {
+      await categoryStore.fetchCategories()
+    }
+
+    // Buscar categoria com comparação segura de IDs
+    const category = categoryStore.categories.find(cat =>
+      String(cat.id) === String(form.value.category_id) ||
+      Number(cat.id) === Number(form.value.category_id)
+    )
+
+    const categoryName = category?.name || ''
+    const recipeName = form.value.name || ''
+
+    // Debug: verificar valores
+    console.log('Generating recipe with:', {
+      categoryName,
+      recipeName,
+      category_id: form.value.category_id,
+      category,
+      allCategories: categoryStore.categories
+    })
+
+    if (!categoryName) {
+      throw new Error('Categoria não encontrada. Por favor, selecione uma categoria válida.')
+    }
+
+    const result = await generateRecipeWithAI(categoryName, recipeName)
+
+    if (result.success && result.data) {
+      // Preencher o formulário com os dados gerados
+      form.value.prep_time_minutes = result.data.prep_time_minutes
+      form.value.servings = result.data.servings
+      form.value.ingredients = result.data.ingredients
+      form.value.instructions = result.data.instructions
+
+      // Se não tinha nome, usar o nome gerado
+      if (!form.value.name && result.data.name) {
+        form.value.name = result.data.name
+      }
+
+      aiSuccess.value = true
+
+      // Limpar mensagem de sucesso após 3 segundos
+      setTimeout(() => {
+        aiSuccess.value = false
+      }, 3000)
+    }
+  } catch (error) {
+    console.error('Error generating recipe:', error)
+    aiError.value = error.message || t('recipe.generateRecipeError')
+
+    // Limpar erro após 5 segundos
+    setTimeout(() => {
+      aiError.value = null
+    }, 5000)
+  } finally {
+    generatingAI.value = false
+  }
+}
 
 const handleImageChange = (event) => {
   const file = event.target.files[0]
@@ -152,8 +243,20 @@ onMounted(async () => {
         <Select v-model="form.category_id" :options="categoryOptions" :label="$t('recipe.category')"
           placeholder="Selecione uma categoria" :error="getFieldError('category_id')" />
 
-        <Input v-model="form.name" type="text" :label="$t('recipe.name')" :placeholder="$t('recipe.name')"
-          :error="getFieldError('name')" />
+        <div class="flex gap-2 items-end">
+          <div class="flex-1">
+            <Input v-model="form.name" type="text" :label="$t('recipe.name')" :placeholder="$t('recipe.name')"
+              :error="getFieldError('name')" />
+          </div>
+          <Button v-if="!isEdit" type="button" variant="secondary" :disabled="!canGenerateAI" :loading="generatingAI"
+            @click="handleGenerateWithAI" class="mb-0">
+            <FontAwesomeIcon v-if="!generatingAI" :icon="faWandMagicSparkles" class="mr-2" />
+            {{ generatingAI ? $t('recipe.generatingRecipe') : $t('recipe.generateWithAI') }}
+          </Button>
+        </div>
+
+        <Alert v-if="aiError" type="error">{{ aiError }}</Alert>
+        <Alert v-if="aiSuccess" type="success">{{ $t('recipe.generateRecipeSuccess') }}</Alert>
 
         <div class="grid grid-cols-2 gap-4">
           <Input v-model.number="form.prep_time_minutes" type="number" :label="$t('recipe.prepTime')"

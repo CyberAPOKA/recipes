@@ -39,6 +39,10 @@ const messages = {
       deleteSuccess: 'Receita excluída com sucesso!',
       deleteConfirm: 'Excluir Receita',
       deleteConfirmMessage: 'Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita.',
+      generateWithAI: 'Gerar com IA',
+      generatingRecipe: 'Gerando receita...',
+      generateRecipeError: 'Erro ao gerar receita com IA',
+      generateRecipeSuccess: 'Receita gerada com sucesso!',
     },
     validation: {
       required: 'O campo {field} é obrigatório.',
@@ -109,6 +113,10 @@ const messages = {
       deleteSuccess: 'Recipe deleted successfully!',
       deleteConfirm: 'Delete Recipe',
       deleteConfirmMessage: 'Are you sure you want to delete this recipe? This action cannot be undone.',
+      generateWithAI: 'Generate with AI',
+      generatingRecipe: 'Generating recipe...',
+      generateRecipeError: 'Error generating recipe with AI',
+      generateRecipeSuccess: 'Recipe generated successfully!',
     },
     validation: {
       required: 'The {field} field is required.',
@@ -179,6 +187,10 @@ const messages = {
       deleteSuccess: '¡Receta eliminada con éxito!',
       deleteConfirm: 'Eliminar Receta',
       deleteConfirmMessage: '¿Estás seguro de que deseas eliminar esta receta? Esta acción no se puede deshacer.',
+      generateWithAI: 'Generar con IA',
+      generatingRecipe: 'Generando receta...',
+      generateRecipeError: 'Error al generar receta con IA',
+      generateRecipeSuccess: '¡Receta generada con éxito!',
     },
     validation: {
       required: 'El campo {field} es obligatorio.',
