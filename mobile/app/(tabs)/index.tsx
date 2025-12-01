@@ -18,6 +18,7 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -198,17 +199,19 @@ export default function HomeScreen() {
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: colors.tint }]}
+            style={styles.headerButton}
             onPress={() => router.push("/(tabs)/recipes/create" as any)}
           >
-            <IconSymbol name="plus" size={20} color="#fff" />
+            <Ionicons name="add" size={20} color={colors.icon} />
+            <Text style={[styles.headerButtonLabel, { color: colors.icon }]}>
+              Receita
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <IconSymbol
-              name="rectangle.portrait.and.arrow.right"
-              size={20}
-              color={colors.icon}
-            />
+          <TouchableOpacity style={styles.headerButton} onPress={handleLogout}>
+            <Ionicons name="log-out" size={20} color={colors.icon} />
+            <Text style={[styles.headerButtonLabel, { color: colors.icon }]}>
+              Sair
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -278,7 +281,7 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     flexDirection: "row",
-    gap: 8,
+    gap: 16,
     alignItems: "center",
   },
   title: {
@@ -289,18 +292,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
+  headerButton: {
     alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
   },
-  logoutButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
+  headerButtonLabel: {
+    fontSize: 14,
+    fontWeight: "500",
   },
   searchContainer: {
     flexDirection: "row",
