@@ -19,4 +19,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Recipe routes
     Route::apiResource('recipes', RecipeController::class);
+    Route::post('/recipes/scrape', [RecipeController::class, 'scrape']);
 });

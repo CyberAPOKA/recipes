@@ -8,10 +8,10 @@ import App from './App.vue'
 /* Import Font Awesome */
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faClock, faUsers, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons'
+import { faClock, faUsers, faWandMagicSparkles, faLink } from '@fortawesome/free-solid-svg-icons'
 
 /* Add icons to the library */
-library.add(faClock, faUsers, faWandMagicSparkles)
+library.add(faClock, faUsers, faWandMagicSparkles, faLink)
 
 const app = createApp(App)
 const pinia = createPinia()

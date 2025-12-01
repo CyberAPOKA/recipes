@@ -7,13 +7,15 @@ use App\Http\Requests\Recipe\UpdateRecipeRequest;
 use App\Http\Resources\RecipeResource;
 use App\Models\Recipe;
 use App\Services\RecipeService;
+use App\Services\RecipeScraperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RecipeController extends Controller
 {
     public function __construct(
-        private RecipeService $recipeService
+        private RecipeService $recipeService,
+        private RecipeScraperService $scraperService
     ) {
     }
 
@@ -108,6 +110,30 @@ class RecipeController extends Controller
 
         return response()->json([
             'message' => 'Recipe deleted successfully',
+        ]);
+    }
+
+    /**
+     * Scrape recipe from external URL (TudoGostoso)
+     */
+    public function scrape(Request $request): JsonResponse
+    {
+        $request->validate([
+            'url' => ['required', 'url'],
+        ]);
+
+        $result = $this->scraperService->scrapeTudoGostoso($request->input('url'));
+
+        if (!$result['success']) {
+            return response()->json([
+                'message' => 'Failed to scrape recipe',
+                'error' => $result['error'] ?? 'Unknown error',
+            ], 400);
+        }
+
+        return response()->json([
+            'message' => 'Recipe scraped successfully',
+            'data' => $result['data'],
         ]);
     }
 }

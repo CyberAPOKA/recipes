@@ -6,6 +6,7 @@ import { useCategoryStore } from '@/stores/category'
 import { useI18n } from 'vue-i18n'
 import { translateValidationError } from '@/utils/validation'
 import { generateRecipeWithAI } from '@/services/openai'
+import { recipeApi } from '@/api/recipe'
 import Card from '@/components/daisyui/Card.vue'
 import Input from '@/components/daisyui/Input.vue'
 import RichTextEditor from '@/components/daisyui/RichTextEditor.vue'
@@ -13,7 +14,7 @@ import Select from '@/components/daisyui/Select.vue'
 import Button from '@/components/daisyui/Button.vue'
 import Alert from '@/components/daisyui/Alert.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons'
+import { faWandMagicSparkles, faLink } from '@fortawesome/free-solid-svg-icons'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,6 +27,10 @@ const loading = computed(() => recipeStore.loading)
 const generatingAI = ref(false)
 const aiError = ref(null)
 const aiSuccess = ref(false)
+const scrapingUrl = ref('')
+const scraping = ref(false)
+const scrapingError = ref(null)
+const scrapingSuccess = ref(false)
 
 const form = ref({
   category_id: null,
@@ -131,6 +136,76 @@ const handleGenerateWithAI = async () => {
     }, 5000)
   } finally {
     generatingAI.value = false
+  }
+}
+
+const handleScrapeRecipe = async () => {
+  if (!scrapingUrl.value.trim()) {
+    scrapingError.value = 'Por favor, insira uma URL válida'
+    return
+  }
+
+  scraping.value = true
+  scrapingError.value = null
+  scrapingSuccess.value = false
+
+  try {
+    const response = await recipeApi.scrape(scrapingUrl.value.trim())
+
+    if (response.data.data) {
+      const scrapedData = response.data.data
+
+      // Preencher o formulário com os dados extraídos
+      if (scrapedData.name) {
+        form.value.name = scrapedData.name
+      }
+
+      if (scrapedData.prep_time_minutes) {
+        form.value.prep_time_minutes = scrapedData.prep_time_minutes
+      }
+
+      if (scrapedData.servings) {
+        form.value.servings = scrapedData.servings
+      }
+
+      if (scrapedData.ingredients) {
+        form.value.ingredients = scrapedData.ingredients
+      }
+
+      if (scrapedData.instructions) {
+        form.value.instructions = scrapedData.instructions
+      }
+
+      // Tentar encontrar e selecionar a categoria correspondente
+      if (scrapedData.category_name && categoryStore.categories.length > 0) {
+        const matchingCategory = categoryStore.categories.find(cat =>
+          cat.name.toLowerCase().includes(scrapedData.category_name.toLowerCase()) ||
+          scrapedData.category_name.toLowerCase().includes(cat.name.toLowerCase())
+        )
+
+        if (matchingCategory) {
+          form.value.category_id = matchingCategory.id
+        }
+      }
+
+      scrapingSuccess.value = true
+      scrapingUrl.value = ''
+
+      // Limpar mensagem de sucesso após 3 segundos
+      setTimeout(() => {
+        scrapingSuccess.value = false
+      }, 3000)
+    }
+  } catch (error) {
+    console.error('Error scraping recipe:', error)
+    scrapingError.value = error.response?.data?.error || error.response?.data?.message || 'Erro ao fazer scraping da receita'
+
+    // Limpar erro após 5 segundos
+    setTimeout(() => {
+      scrapingError.value = null
+    }, 5000)
+  } finally {
+    scraping.value = false
   }
 }
 
@@ -257,6 +332,23 @@ onMounted(async () => {
 
         <Alert v-if="aiError" type="error">{{ aiError }}</Alert>
         <Alert v-if="aiSuccess" type="success">{{ $t('recipe.generateRecipeSuccess') }}</Alert>
+
+        <div v-if="!isEdit" class="form-control w-full">
+          <label class="label">
+            <span class="label-text">{{ $t('recipe.scrapeFromUrl') }}</span>
+          </label>
+          <div class="flex gap-2">
+            <input v-model="scrapingUrl" type="url" :placeholder="$t('recipe.urlPlaceholder')"
+              class="input input-bordered flex-1" :disabled="scraping" />
+            <Button type="button" variant="secondary" :disabled="!scrapingUrl.trim() || scraping" :loading="scraping"
+              @click="handleScrapeRecipe">
+              <FontAwesomeIcon v-if="!scraping" :icon="faLink" class="mr-2" />
+              {{ scraping ? $t('recipe.scrapingRecipe') : $t('recipe.scrapeFromUrl') }}
+            </Button>
+          </div>
+          <Alert v-if="scrapingError" type="error" class="mt-2">{{ scrapingError }}</Alert>
+          <Alert v-if="scrapingSuccess" type="success" class="mt-2">{{ $t('recipe.scrapeRecipeSuccess') }}</Alert>
+        </div>
 
         <div class="grid grid-cols-2 gap-4">
           <Input v-model.number="form.prep_time_minutes" type="number" :label="$t('recipe.prepTime')"

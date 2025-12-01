@@ -2,7 +2,7 @@ import api from './axios'
 
 const prepareFormData = (data) => {
   const formData = new FormData()
-  
+
   Object.keys(data).forEach(key => {
     if (data[key] !== null && data[key] !== undefined) {
       if (key === 'image' && data[key] instanceof File) {
@@ -14,7 +14,7 @@ const prepareFormData = (data) => {
       }
     }
   })
-  
+
   return formData
 }
 
@@ -44,5 +44,6 @@ export const recipeApi = {
     return api.put(`/recipes/${id}`, data)
   },
   delete: (id) => api.delete(`/recipes/${id}`),
+  scrape: (url) => api.post('/recipes/scrape', { url }),
 }
 
