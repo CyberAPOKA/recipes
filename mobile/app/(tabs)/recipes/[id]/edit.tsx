@@ -9,17 +9,20 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { apiService, Category } from '@/services/api';
+import { apiService, Recipe, Category } from '@/services/api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BottomNavigation } from '@/components/BottomNavigation';
 
-export default function CreateRecipeScreen() {
+export default function EditRecipeScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     category_id: null as number | null,
@@ -31,11 +34,36 @@ export default function CreateRecipeScreen() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingRecipe, setLoadingRecipe] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
   useEffect(() => {
     loadCategories();
-  }, []);
+    loadRecipe();
+  }, [id]);
+
+  const loadRecipe = async () => {
+    try {
+      setLoadingRecipe(true);
+      const response = await apiService.getRecipe(Number(id));
+      const recipeData = response.data;
+      setRecipe(recipeData);
+      setFormData({
+        name: recipeData.name || '',
+        category_id: recipeData.category_id || null,
+        prep_time_minutes: recipeData.prep_time_minutes?.toString() || '',
+        servings: recipeData.servings?.toString() || '',
+        instructions: recipeData.instructions || '',
+        ingredients: recipeData.ingredients || '',
+      });
+    } catch (error) {
+      console.error('Erro ao carregar receita:', error);
+      Alert.alert('Erro', 'Não foi possível carregar a receita');
+      router.back();
+    } finally {
+      setLoadingRecipe(false);
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -67,16 +95,24 @@ export default function CreateRecipeScreen() {
         ingredients: formData.ingredients || null,
       };
 
-      const response = await apiService.createRecipe(data);
-      Alert.alert('Sucesso', 'Receita criada com sucesso');
-      router.push(`/recipes/${response.data.id}`);
+      await apiService.updateRecipe(Number(id), data);
+      Alert.alert('Sucesso', 'Receita atualizada com sucesso');
+      router.back();
     } catch (error: any) {
-      console.error('Erro ao criar receita:', error);
-      Alert.alert('Erro', error.message || 'Não foi possível criar a receita');
+      console.error('Erro ao atualizar receita:', error);
+      Alert.alert('Erro', error.message || 'Não foi possível atualizar a receita');
     } finally {
       setLoading(false);
     }
   };
+
+  if (loadingRecipe) {
+    return (
+      <View style={[styles.container, styles.centerContent, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.tint} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -84,7 +120,7 @@ export default function CreateRecipeScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Nova Receita</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Editar Receita</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -216,10 +252,11 @@ export default function CreateRecipeScreen() {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitButtonText}>Criar Receita</Text>
+            <Text style={styles.submitButtonText}>Salvar Alterações</Text>
           )}
         </TouchableOpacity>
       </View>
+      <BottomNavigation />
     </ScrollView>
   );
 }
@@ -227,6 +264,10 @@ export default function CreateRecipeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -247,6 +288,7 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: 16,
+    paddingBottom: 100, // Espaço para o BottomNavigation
   },
   inputGroup: {
     marginBottom: 20,

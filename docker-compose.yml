@@ -123,6 +123,7 @@ services:
       - EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-http://localhost:8000/api}
       - PORT=8081
       - WEB_PORT=${MOBILE_WEB_PORT:-19006}
+    entrypoint: ["/bin/sh", "/app/docker-entrypoint.sh"]
     networks:
       - recipes_network
 

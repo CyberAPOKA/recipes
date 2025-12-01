@@ -1,5 +1,19 @@
 import { API_BASE_URL, getAuthToken } from '@/constants/api';
 
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuthResponse {
+  message: string;
+  user: User;
+  token: string;
+}
+
 export interface ApiResponse<T> {
   data: T;
   message?: string;
@@ -61,7 +75,7 @@ class ApiService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const token = getAuthToken();
+    const token = await getAuthToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -84,13 +98,73 @@ class ApiService {
     return response.json();
   }
 
+  // Auth endpoints
+  async login(email: string, password: string): Promise<AuthResponse> {
+    const response = await fetch(`${this.baseURL}/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Erro ao fazer login' }));
+      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async register(
+    name: string,
+    email: string,
+    password: string,
+    password_confirmation: string
+  ): Promise<AuthResponse> {
+    const response = await fetch(`${this.baseURL}/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name, email, password, password_confirmation }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Erro ao registrar' }));
+      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async logout(): Promise<void> {
+    const token = await getAuthToken();
+    if (!token) return;
+
+    await fetch(`${this.baseURL}/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+
+  async getCurrentUser(): Promise<ApiResponse<User>> {
+    return this.request<User>('/user');
+  }
+
   // Recipe endpoints
   async getRecipes(page: number = 1, search?: string): Promise<ApiResponse<Recipe[]>> {
+    // Usar /recipes quando autenticado, /public/recipes quando não autenticado
+    const token = await getAuthToken();
+    const endpoint = token ? '/recipes' : '/public/recipes';
     const params = new URLSearchParams({ page: page.toString() });
     if (search) {
       params.append('search', search);
     }
-    return this.request<Recipe[]>(`/public/recipes?${params.toString()}`);
+    return this.request<Recipe[]>(`${endpoint}?${params.toString()}`);
   }
 
   async getRecipe(id: number): Promise<ApiResponse<Recipe>> {

@@ -193,6 +193,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    paddingBottom: 100, // Espaço para o BottomNavigation
   },
   title: {
     fontSize: 28,

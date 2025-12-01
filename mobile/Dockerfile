@@ -15,7 +15,7 @@ RUN npm install
 # Copy application files
 COPY . .
 
-# Copy entrypoint script
+# Copy entrypoint script (will be overridden by volume mount, but needed for initial build)
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

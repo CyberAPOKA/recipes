@@ -18,21 +18,29 @@ class HandleCors
         $allowedOrigins = [
             'http://localhost:5173',
             'http://localhost:3000',
+            'http://localhost:8081',
+            'http://localhost:19006',
             'http://127.0.0.1:5173',
             'http://127.0.0.1:3000',
+            'http://127.0.0.1:8081',
+            'http://127.0.0.1:19006',
         ];
 
         $origin = $request->headers->get('Origin');
+        
+        // Check if origin is allowed
+        $isAllowedOrigin = $origin && in_array($origin, $allowedOrigins);
 
         // Handle preflight requests - must return before calling $next()
         if ($request->getMethod() === 'OPTIONS') {
             $response = response('', 200);
 
-            // Always set CORS headers for preflight
-            if ($origin) {
+            // Set CORS headers for preflight
+            if ($isAllowedOrigin) {
                 $response->headers->set('Access-Control-Allow-Origin', $origin);
             } else {
-                $response->headers->set('Access-Control-Allow-Origin', '*');
+                // Allow all origins for development (you can restrict this in production)
+                $response->headers->set('Access-Control-Allow-Origin', $origin ?: '*');
             }
 
             $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
@@ -47,7 +55,10 @@ class HandleCors
         $response = $next($request);
 
         // Add CORS headers to the response
-        if ($origin) {
+        if ($isAllowedOrigin) {
+            $response->headers->set('Access-Control-Allow-Origin', $origin);
+        } else if ($origin) {
+            // Allow all origins for development (you can restrict this in production)
             $response->headers->set('Access-Control-Allow-Origin', $origin);
         }
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
