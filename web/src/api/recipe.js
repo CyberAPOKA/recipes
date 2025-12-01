@@ -101,5 +101,10 @@ export const publicRecipeApi = {
   deleteComment: (recipeId, commentId) => api.delete(`/public/recipes/${recipeId}/comments/${commentId}`),
   addRating: (recipeId, rating) => api.post(`/public/recipes/${recipeId}/ratings`, { rating }),
   getRating: (recipeId) => api.get(`/public/recipes/${recipeId}/ratings`),
+  downloadPdf: (id) => {
+    return api.get(`/public/recipes/${id}/pdf`, {
+      responseType: 'blob',
+    })
+  },
 }
 

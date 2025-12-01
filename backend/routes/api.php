@@ -19,6 +19,7 @@ Route::get('/categories', [CategoryController::class, 'index']);
 // For optional auth, we'll handle it in the controller
 Route::get('/public/recipes', [PublicRecipeController::class, 'index']);
 Route::get('/public/recipes/{id}', [PublicRecipeController::class, 'show']);
+Route::get('/public/recipes/{id}/pdf', [PublicRecipeController::class, 'downloadPdf']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {

@@ -48,7 +48,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen bg-base-200">
-    <nav class="navbar bg-base-100 shadow-lg px-2 sm:px-4">
+    <nav class="navbar bg-base-100 shadow-lg px-2 sm:px-4 no-print">
       <!-- Mobile Hamburger Button -->
       <div class="flex-none lg:hidden">
         <button class="btn btn-square btn-ghost" @click="toggleMobileMenu">
@@ -65,8 +65,11 @@ onMounted(() => {
 
       <!-- Desktop Menu Items -->
       <div class="flex-none gap-1 sm:gap-2 hidden lg:flex">
-        <Button variant="primary" @click="$router.push('/recipes/create')">
+        <Button v-if="authStore.isAuthenticated" variant="primary" @click="$router.push('/recipes/create')">
           {{ $t('recipe.create') }}
+        </Button>
+        <Button v-else variant="primary" @click="$router.push('/login')">
+          {{ $t('auth.login') }}
         </Button>
         <ThemeSelector />
         <LanguageSelector />
@@ -84,7 +87,7 @@ onMounted(() => {
     </nav>
 
     <!-- Mobile Menu Drawer -->
-    <div v-if="mobileMenuOpen" class="lg:hidden fixed inset-0 z-50" @click="closeMobileMenu">
+    <div v-if="mobileMenuOpen" class="lg:hidden fixed inset-0 z-50 no-print" @click="closeMobileMenu">
       <!-- Overlay -->
       <div class="fixed inset-0 bg-black bg-opacity-50"></div>
       <!-- Drawer -->

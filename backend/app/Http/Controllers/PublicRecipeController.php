@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\RecipeResource;
+use App\Services\RecipePdfService;
 use App\Services\RecipeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,8 @@ use OpenApi\Attributes as OA;
 class PublicRecipeController extends Controller
 {
     public function __construct(
-        private RecipeService $recipeService
+        private RecipeService $recipeService,
+        private RecipePdfService $pdfService
     ) {
     }
 
@@ -173,5 +175,42 @@ class PublicRecipeController extends Controller
         return response()->json([
             'data' => new RecipeResource($recipe),
         ]);
+    }
+
+    /**
+     * Download PDF for a recipe
+     */
+    #[OA\Get(
+        path: "/api/public/recipes/{id}/pdf",
+        summary: "Download recipe as PDF",
+        tags: ["Public Recipes"],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"), example: 1),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "PDF file",
+                content: new OA\MediaType(
+                    mediaType: "application/pdf"
+                )
+            ),
+            new OA\Response(response: 404, description: "Recipe not found"),
+        ]
+    )]
+    public function downloadPdf(int $id)
+    {
+        $recipe = $this->recipeService->getPublicRecipe($id);
+
+        if (!$recipe) {
+            return response()->json([
+                'message' => 'Recipe not found',
+            ], 404);
+        }
+
+        $pdf = $this->pdfService->generatePdf($recipe);
+        $filename = str_replace([' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|'], '_', $recipe->name ?? 'receita') . '.pdf';
+
+        return $pdf->download($filename);
     }
 }

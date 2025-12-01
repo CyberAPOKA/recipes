@@ -1,10 +1,10 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { publicRecipeApi } from '@/api/recipe'
+import { publicRecipeApi, recipeApi } from '@/api/recipe'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faStar, faComments, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faStar, faComments, faTrash, faEdit, faDownload, faPrint } from '@fortawesome/free-solid-svg-icons'
 import Card from '@/components/daisyui/Card.vue'
 import Button from '@/components/daisyui/Button.vue'
 import Input from '@/components/daisyui/Input.vue'
@@ -134,7 +134,7 @@ const renderStars = (rating, interactive = false) => {
   const fullStars = Math.floor(rating)
   const hasHalfStar = rating % 1 >= 0.5
   const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0)
-  
+
   return {
     full: fullStars,
     half: hasHalfStar ? 1 : 0,
@@ -147,6 +147,49 @@ const canDeleteComment = (comment) => {
     comment.user.id === authStore.user.id ||
     recipe.value.user_id === authStore.user.id
   )
+}
+
+const isRecipeOwner = computed(() => {
+  return authStore.isAuthenticated && recipe.value && recipe.value.user_id === authStore.user.id
+})
+
+const downloadPdf = async () => {
+  if (!recipe.value) return
+
+  try {
+    const response = await publicRecipeApi.downloadPdf(recipe.value.id)
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${(recipe.value.name || 'receita').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Error downloading PDF:', error)
+    alert('Erro ao baixar PDF. Tente novamente.')
+  }
+}
+
+const printRecipe = () => {
+  window.print()
+}
+
+const deleteRecipe = async () => {
+  if (!confirm('Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita.')) {
+    return
+  }
+
+  try {
+    await recipeApi.delete(recipe.value.id)
+    alert('Receita excluída com sucesso!')
+    router.push('/')
+  } catch (error) {
+    console.error('Error deleting recipe:', error)
+    alert('Erro ao excluir receita')
+  }
 }
 
 onMounted(() => {
@@ -167,9 +210,29 @@ watch(() => route.params.id, () => {
     <div v-else-if="recipe">
       <!-- Header -->
       <div class="mb-6">
-        <Button variant="ghost" @click="$router.push('/')" class="mb-4">
-          ← Voltar
-        </Button>
+        <div class="flex justify-between items-start mb-4">
+          <Button variant="ghost" class="no-print" @click="$router.push('/')">
+            ← Voltar
+          </Button>
+          <div class="flex gap-2  no-print">
+            <Button variant="secondary" @click="printRecipe">
+              <FontAwesomeIcon :icon="faPrint" class="mr-2" />
+              Imprimir
+            </Button>
+            <Button variant="secondary" @click="downloadPdf">
+              <FontAwesomeIcon :icon="faDownload" class="mr-2" />
+              PDF
+            </Button>
+            <Button v-if="isRecipeOwner" variant="primary" @click="$router.push(`/recipes/${recipe.id}/edit`)">
+              <FontAwesomeIcon :icon="faEdit" class="mr-2" />
+              Editar
+            </Button>
+            <Button v-if="isRecipeOwner" variant="error" @click="deleteRecipe">
+              <FontAwesomeIcon :icon="faTrash" class="mr-2" />
+              Excluir
+            </Button>
+          </div>
+        </div>
         <h1 class="text-3xl font-bold">{{ recipe.name || 'Receita sem nome' }}</h1>
         <div v-if="recipe.user" class="text-gray-500 mt-2">
           Por: {{ recipe.user.name }}
@@ -177,12 +240,8 @@ watch(() => route.params.id, () => {
       </div>
 
       <!-- Image -->
-      <img
-        v-if="recipe.image"
-        :src="recipe.image"
-        :alt="recipe.name || 'Recipe image'"
-        class="w-full h-96 object-cover rounded-lg mb-4"
-      />
+      <img v-if="recipe.image" :src="recipe.image" :alt="recipe.name || 'Recipe image'"
+        class="w-full h-96 object-cover rounded-lg mb-4" />
 
       <!-- Category Badge -->
       <div v-if="recipe.category" class="mb-4">
@@ -201,69 +260,12 @@ watch(() => route.params.id, () => {
         </div>
       </div>
 
-      <!-- Rating Section -->
-      <Card bordered class="mb-6">
-        <template #title>
-          <div class="flex items-center justify-between">
-            <span>Avaliação</span>
-            <div v-if="averageRating > 0" class="flex items-center gap-2">
-              <div class="flex items-center gap-1">
-                <FontAwesomeIcon
-                  v-for="i in renderStars(averageRating).full"
-                  :key="`full-${i}`"
-                  :icon="faStar"
-                  class="text-yellow-400"
-                />
-                <FontAwesomeIcon
-                  v-if="renderStars(averageRating).half"
-                  :icon="faStar"
-                  class="text-yellow-400"
-                  style="clip-path: inset(0 50% 0 0);"
-                />
-                <FontAwesomeIcon
-                  v-for="i in renderStars(averageRating).empty"
-                  :key="`empty-${i}`"
-                  :icon="faStar"
-                  class="text-gray-300"
-                />
-              </div>
-              <span class="font-bold">{{ averageRating.toFixed(1) }}</span>
-              <span v-if="ratingsCount" class="text-sm text-gray-500">
-                ({{ ratingsCount }} avaliação{{ ratingsCount !== 1 ? 'ões' : '' }})
-              </span>
-            </div>
-          </div>
-        </template>
-        <div v-if="authStore.isAuthenticated && recipe.user_id !== authStore.user.id">
-          <p class="mb-2">Sua avaliação:</p>
-          <div class="flex gap-1">
-            <button
-              v-for="i in 5"
-              :key="i"
-              @click="submitRating(i)"
-              :disabled="submittingRating"
-              class="text-2xl transition-colors"
-              :class="i <= selectedRating ? 'text-yellow-400' : 'text-gray-300'"
-            >
-              <FontAwesomeIcon :icon="faStar" />
-            </button>
-          </div>
-        </div>
-        <div v-else-if="!authStore.isAuthenticated" class="text-gray-500">
-          <a href="/login" class="link link-primary">Faça login</a> para avaliar esta receita
-        </div>
-        <div v-else class="text-gray-500">
-          Você não pode avaliar sua própria receita
-        </div>
-      </Card>
-
       <!-- Ingredients -->
       <div v-if="recipe.ingredients" class="mb-6">
         <h2 class="text-xl font-bold mb-2">Ingredientes</h2>
         <div
           class="max-w-none prose prose-lg [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:my-4 [&_h2]:text-3xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-2xl [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_blockquote]:border-l-4 [&_blockquote]:border-base-300 [&_blockquote]:pl-4 [&_blockquote]:my-4 [&_blockquote]:italic [&_hr]:border-t [&_hr]:border-base-300 [&_hr]:my-4 [&_a]:link [&_a]:link-primary"
-          v-html="recipe.ingredients"
-        ></div>
+          v-html="recipe.ingredients"></div>
       </div>
 
       <!-- Instructions -->
@@ -271,12 +273,47 @@ watch(() => route.params.id, () => {
         <h2 class="text-xl font-bold mb-2">Modo de preparo</h2>
         <div
           class="max-w-none prose prose-lg [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:my-4 [&_h2]:text-3xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-2xl [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_blockquote]:border-l-4 [&_blockquote]:border-base-300 [&_blockquote]:pl-4 [&_blockquote]:my-4 [&_blockquote]:italic [&_hr]:border-t [&_hr]:border-base-300 [&_hr]:my-4 [&_a]:link [&_a]:link-primary"
-          v-html="recipe.instructions"
-        ></div>
+          v-html="recipe.instructions"></div>
       </div>
 
+      <!-- Rating Section - Only show if there are ratings or user can rate (not owner) -->
+      <Card v-if="(Number(averageRating) > 0 || Number(ratingsCount) > 0) || !isRecipeOwner" bordered
+        class="mb-6 no-print">
+
+        <div class="flex items-center justify-between">
+          <span>Avaliação</span>
+          <div v-if="Number(averageRating) > 0 || Number(ratingsCount) > 0" class="flex items-center gap-2">
+            <div class="flex items-center gap-1">
+              <FontAwesomeIcon v-for="i in renderStars(averageRating).full" :key="`full-${i}`" :icon="faStar"
+                class="text-yellow-400" />
+              <FontAwesomeIcon v-if="renderStars(averageRating).half" :icon="faStar" class="text-yellow-400"
+                style="clip-path: inset(0 50% 0 0);" />
+              <FontAwesomeIcon v-for="i in renderStars(averageRating).empty" :key="`empty-${i}`" :icon="faStar"
+                class="text-gray-300" />
+            </div>
+            <span class="font-bold">{{ averageRating.toFixed(1) }}</span>
+            <span v-if="ratingsCount" class="text-sm text-gray-500">
+              ({{ ratingsCount }} avaliação{{ ratingsCount !== 1 ? 'ões' : '' }})
+            </span>
+          </div>
+        </div>
+
+        <div v-if="authStore.isAuthenticated && recipe.user_id !== authStore.user.id">
+          <p class="mb-2">Sua avaliação:</p>
+          <div class="flex gap-1">
+            <button v-for="i in 5" :key="i" @click="submitRating(i)" :disabled="submittingRating"
+              class="text-2xl transition-colors" :class="i <= selectedRating ? 'text-yellow-400' : 'text-gray-300'">
+              <FontAwesomeIcon :icon="faStar" />
+            </button>
+          </div>
+        </div>
+        <div v-else-if="!authStore.isAuthenticated" class="text-gray-500">
+          <a href="/login" class="link link-primary">Faça login</a> para avaliar esta receita
+        </div>
+      </Card>
+
       <!-- Comments Section -->
-      <Card bordered>
+      <Card bordered class="no-print">
         <template #title>
           <div class="flex items-center gap-2">
             <FontAwesomeIcon :icon="faComments" />
@@ -286,17 +323,8 @@ watch(() => route.params.id, () => {
 
         <!-- Add Comment Form -->
         <div v-if="authStore.isAuthenticated" class="mb-6">
-          <Textarea
-            v-model="newComment"
-            placeholder="Deixe um comentário..."
-            :rows="4"
-          />
-          <Button
-            variant="primary"
-            class="mt-2"
-            :loading="submittingComment"
-            @click="submitComment"
-          >
+          <Textarea v-model="newComment" placeholder="Deixe um comentário..." :rows="4" />
+          <Button variant="primary" class="mt-2" :loading="submittingComment" @click="submitComment">
             Enviar comentário
           </Button>
         </div>
@@ -309,11 +337,7 @@ watch(() => route.params.id, () => {
           Nenhum comentário ainda. Seja o primeiro a comentar!
         </div>
         <div v-else class="space-y-4">
-          <div
-            v-for="comment in comments"
-            :key="comment.id"
-            class="border-b border-base-300 pb-4 last:border-0"
-          >
+          <div v-for="comment in comments" :key="comment.id" class="border-b border-base-300 pb-4 last:border-0">
             <div class="flex justify-between items-start mb-2">
               <div>
                 <p class="font-bold">{{ comment.user.name }}</p>
@@ -321,12 +345,7 @@ watch(() => route.params.id, () => {
                   {{ new Date(comment.created_at).toLocaleDateString('pt-BR') }}
                 </p>
               </div>
-              <Button
-                v-if="canDeleteComment(comment)"
-                variant="ghost"
-                size="sm"
-                @click="deleteComment(comment.id)"
-              >
+              <Button v-if="canDeleteComment(comment)" variant="ghost" size="sm" @click="deleteComment(comment.id)">
                 <FontAwesomeIcon :icon="faTrash" />
               </Button>
             </div>
@@ -345,3 +364,86 @@ watch(() => route.params.id, () => {
   </div>
 </template>
 
+<style scoped>
+/* Print Styles - Only print the recipe content */
+@media print {
+
+  /* Hide navigation, layout, buttons, and other non-recipe elements */
+  nav,
+  .navbar,
+  .no-print,
+  button,
+  .btn,
+  [class*="button"],
+  [class*="Button"],
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  a[role="button"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the recipe content */
+  .container,
+  .container * {
+    visibility: visible;
+  }
+
+  /* Position the recipe at the top */
+  .container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 20px;
+    margin: 0;
+    background: white;
+  }
+
+  /* Ensure images print properly */
+  img {
+    max-width: 100%;
+    height: auto;
+    page-break-inside: avoid;
+  }
+
+  /* Page break control */
+  h1,
+  h2 {
+    page-break-after: avoid;
+  }
+
+  /* Ensure content doesn't break awkwardly */
+  .prose {
+    page-break-inside: avoid;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  .card,
+  .shadow-lg,
+  .shadow-xl {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* Ensure text is black for print */
+  * {
+    color: #000 !important;
+    background: white !important;
+  }
+}
+
+/* Ensure print button is visible on screen */
+@media screen {
+  .no-print {
+    display: block;
+  }
+}
+</style>
