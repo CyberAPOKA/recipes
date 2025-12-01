@@ -1,50 +1,125 @@
-# Welcome to your Expo app 👋
+# Receitas Mobile App 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo mobile React Native (Expo) para gerenciamento de receitas.
 
-## Get started
+## Configuração
 
-1. Install dependencies
+1. Instale as dependências:
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Configure a URL da API:
+
+   **Opção 1: Usando arquivo .env (recomendado)**
+
+   Crie um arquivo `.env` na raiz do projeto mobile (`mobile/.env`) com:
+
+   ```
+   EXPO_PUBLIC_API_URL=http://localhost:8000/api
+   ```
+
+   **Opção 2: Usando Docker Compose**
+
+   Se estiver usando Docker, configure no arquivo `docker-compose.env.example` (ou `.env` na raiz do projeto):
+
+   ```
+   EXPO_PUBLIC_API_URL=http://localhost:8000/api
+   ```
+
+   **Opção 3: Configuração direta**
+
+   Edite `mobile/constants/api.ts` e altere a URL padrão se necessário.
+
+3. Inicie o app:
+
+   **Desenvolvimento local:**
 
    ```bash
+   cd mobile
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+   **Com Docker:**
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   ```bash
+   docker-compose up -d mobile
+   ```
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Como Acessar o App
 
-## Get a fresh project
+### Com Docker (`docker-compose up -d`)
 
-When you're ready, run:
+Quando você rodar `docker-compose up -d`, o Expo será iniciado automaticamente com suporte web. Você terá acesso em:
 
-```bash
-npm run reset-project
+- **Metro Bundler (Interface de Desenvolvimento)**: http://localhost:8081
+
+  - Aqui você verá o QR code e opções para abrir no dispositivo/simulador
+  - Interface de desenvolvimento do Expo
+
+- **App Web (Versão Web do App)**: http://localhost:19006
+  - Versão web completa do aplicativo
+  - Funciona diretamente no navegador
+
+**Nota:** Se a porta 8081 já estiver em uso, você pode alterar no arquivo `.env`:
+
+```env
+MOBILE_PORT=8083
+MOBILE_WEB_PORT=19007
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Desenvolvimento Local (sem Docker)
 
-## Learn more
+1. **No terminal, após iniciar o Expo**, você verá um QR code
+2. **Escaneie o QR code** com:
+   - **iOS**: App Camera nativo ou Expo Go
+   - **Android**: Expo Go app
+3. Ou pressione:
+   - `i` para abrir no simulador iOS
+   - `a` para abrir no emulador Android
+   - `w` para abrir no navegador web (porta 19006)
 
-To learn more about developing your project with Expo, look at the following resources:
+## Funcionalidades
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- ✅ Listagem de receitas com busca
+- ✅ Visualização detalhada de receitas
+- ✅ Criação de receitas (simplificada, sem scrap ou ChatGPT)
+- ✅ Edição de receitas
+- ✅ Exclusão de receitas
+- ✅ Suporte a categorias
+- ✅ Interface responsiva com suporte a tema claro/escuro
 
-## Join the community
+## Estrutura de Telas
 
-Join our community of developers creating universal apps.
+- `/recipes` - Listagem de receitas (aba principal)
+- `/recipes/[id]` - Visualização detalhada
+- `/recipes/create` - Criação de nova receita
+- `/recipes/[id]/edit` - Edição de receita
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Desenvolvimento
+
+Você pode começar a desenvolver editando os arquivos dentro do diretório **app**. Este projeto usa [roteamento baseado em arquivos](https://docs.expo.dev/router/introduction) do Expo Router.
+
+## Troubleshooting
+
+### Porta 8081 já está em uso
+
+Se você receber um erro de que a porta 8081 já está em uso:
+
+1. **Com Docker**: Altere no arquivo `.env`:
+
+   ```env
+   MOBILE_PORT=8083
+   ```
+
+2. **Localmente**: O Expo tentará usar outra porta automaticamente, ou você pode especificar:
+   ```bash
+   npx expo start --port 8083
+   ```
+
+### App não carrega no navegador
+
+- Verifique se o container está rodando: `docker-compose ps`
+- Verifique os logs: `docker-compose logs mobile`
+- Acesse http://localhost:19006 (porta do web) ao invés de 8081

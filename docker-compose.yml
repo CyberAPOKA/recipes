@@ -118,8 +118,11 @@ services:
       - /app/node_modules
     ports:
       - "${MOBILE_PORT:-8081}:8081"
+      - "${MOBILE_WEB_PORT:-19006}:19006"
     environment:
-      - EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-http://localhost:8000}
+      - EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-http://localhost:8000/api}
+      - PORT=8081
+      - WEB_PORT=${MOBILE_WEB_PORT:-19006}
     networks:
       - recipes_network
 

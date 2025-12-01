@@ -19,8 +19,10 @@ COPY . .
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Expose port
-EXPOSE 8081
+# Expose ports
+# 8081 - Metro Bundler (development server)
+# 19006 - Web version (default Expo web port)
+EXPOSE 8081 19006
 
 # Use entrypoint script
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
