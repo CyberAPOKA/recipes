@@ -18,6 +18,7 @@ tests/
 ## Executando Testes
 
 ### Instalar dependências primeiro
+
 ```bash
 npm install
 ```
@@ -40,9 +41,23 @@ npm run test:coverage
 
 ### Testes E2E
 
+**Importante**: Antes de executar os testes E2E pela primeira vez, você precisa instalar os navegadores:
+
+```bash
+# Instalar navegadores do Playwright (necessário apenas uma vez)
+npm run test:e2e:install
+# ou
+npx playwright install
+```
+
+Depois, execute os testes:
+
 ```bash
 # Executar todos os testes E2E
 npm run test:e2e
+
+# Executar apenas no Chromium (mais rápido)
+npm run test:e2e -- --project=chromium
 
 # Interface visual do Playwright
 npm run test:e2e:ui
@@ -68,60 +83,62 @@ npx playwright test --debug
 ### Teste Unitário de Componente
 
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
-import MyComponent from '@/components/MyComponent.vue'
+import { describe, it, expect } from "vitest";
+import { mount } from "@vue/test-utils";
+import MyComponent from "@/components/MyComponent.vue";
 
-describe('MyComponent', () => {
-  it('renders correctly', () => {
+describe("MyComponent", () => {
+  it("renders correctly", () => {
     const wrapper = mount(MyComponent, {
-      props: { title: 'Test' }
-    })
-    
-    expect(wrapper.text()).toContain('Test')
-  })
-})
+      props: { title: "Test" },
+    });
+
+    expect(wrapper.text()).toContain("Test");
+  });
+});
 ```
 
 ### Teste de Store
 
 ```typescript
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useMyStore } from '@/stores/myStore'
+import { describe, it, expect, beforeEach } from "vitest";
+import { setActivePinia, createPinia } from "pinia";
+import { useMyStore } from "@/stores/myStore";
 
-describe('MyStore', () => {
+describe("MyStore", () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
-  })
+    setActivePinia(createPinia());
+  });
 
-  it('initializes correctly', () => {
-    const store = useMyStore()
-    expect(store.value).toBe(null)
-  })
-})
+  it("initializes correctly", () => {
+    const store = useMyStore();
+    expect(store.value).toBe(null);
+  });
+});
 ```
 
 ### Teste E2E
 
 ```typescript
-import { test, expect } from '@playwright/test'
+import { test, expect } from "@playwright/test";
 
-test('user can do something', async ({ page }) => {
-  await page.goto('/')
-  await page.click('button')
-  await expect(page.locator('.result')).toBeVisible()
-})
+test("user can do something", async ({ page }) => {
+  await page.goto("/");
+  await page.click("button");
+  await expect(page.locator(".result")).toBeVisible();
+});
 ```
 
 ## Configuração
 
 ### Vitest
+
 - Ambiente: `happy-dom` (simula DOM)
 - Setup global em `tests/setup.ts`
 - Aliases configurados para `@/` apontar para `src/`
 
 ### Playwright
+
 - Base URL: `http://localhost:5173`
 - Servidor de desenvolvimento iniciado automaticamente
 - Navegadores: Chromium, Firefox, WebKit
@@ -129,11 +146,13 @@ test('user can do something', async ({ page }) => {
 ## Boas Práticas
 
 1. **Testes Unitários**:
+
    - Teste comportamento, não implementação
    - Use mocks para dependências externas
    - Mantenha testes isolados
 
 2. **Testes E2E**:
+
    - Teste fluxos completos do usuário
    - Use seletores estáveis (data-testid, roles)
    - Aguarde elementos aparecerem antes de interagir
@@ -146,6 +165,7 @@ test('user can do something', async ({ page }) => {
 ## Debugging
 
 ### Vitest
+
 ```bash
 # Modo debug
 npm run test -- --inspect-brk
@@ -155,6 +175,7 @@ npm run test Button.test.ts
 ```
 
 ### Playwright
+
 ```bash
 # Modo debug interativo
 npx playwright test --debug
@@ -177,4 +198,3 @@ Os testes podem ser executados em CI/CD:
     npm run test
     npm run test:e2e
 ```
-
