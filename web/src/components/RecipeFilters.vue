@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useCategoryStore } from '@/stores/category'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faFilter } from '@fortawesome/free-solid-svg-icons'
@@ -7,6 +8,8 @@ import Card from '@/components/daisyui/Card.vue'
 import Button from '@/components/daisyui/Button.vue'
 import Select from '@/components/daisyui/Select.vue'
 import Input from '@/components/daisyui/Input.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   modelValue: {
@@ -50,7 +53,7 @@ watch(localSearch, (newValue) => {
 
 const categoryOptions = computed(() => {
   return [
-    { value: null, label: 'Todas as categorias' },
+    { value: null, label: t('filter.allCategories') },
     ...categoryStore.categories.map(cat => ({
       value: cat.id,
       label: cat.name,
@@ -58,22 +61,22 @@ const categoryOptions = computed(() => {
   ]
 })
 
-const operatorOptions = [
-  { value: 'exact', label: 'Exato' },
-  { value: 'above', label: 'Acima de' },
-  { value: 'below', label: 'Abaixo de' },
-]
+const operatorOptions = computed(() => [
+  { value: 'exact', label: t('filter.operator.exact') },
+  { value: 'above', label: t('filter.operator.above') },
+  { value: 'below', label: t('filter.operator.below') },
+])
 
-const sortOptions = [
-  { value: 'recent', label: 'Mais recentes' },
-  { value: 'oldest', label: 'Mais antigos' },
-  { value: 'rating_desc', label: 'Melhores avaliados' },
-  { value: 'rating_asc', label: 'Piores avaliados' },
-  { value: 'comments_desc', label: 'Mais comentados' },
-  { value: 'comments_asc', label: 'Menos comentados' },
-  { value: 'name_asc', label: 'Nome A-Z' },
-  { value: 'name_desc', label: 'Nome Z-A' },
-]
+const sortOptions = computed(() => [
+  { value: 'recent', label: t('filter.sort.recent') },
+  { value: 'oldest', label: t('filter.sort.oldest') },
+  { value: 'rating_desc', label: t('filter.sort.ratingDesc') },
+  { value: 'rating_asc', label: t('filter.sort.ratingAsc') },
+  { value: 'comments_desc', label: t('filter.sort.commentsDesc') },
+  { value: 'comments_asc', label: t('filter.sort.commentsAsc') },
+  { value: 'name_asc', label: t('filter.sort.nameAsc') },
+  { value: 'name_desc', label: t('filter.sort.nameDesc') },
+])
 
 const updateFilter = (key, value) => {
   // For search, update local value (which will trigger debounced watch)
@@ -108,27 +111,27 @@ const applyFilters = () => {
       <div class="flex justify-between items-center">
         <span class="flex items-center gap-2">
           <FontAwesomeIcon :icon="faFilter" />
-          Filtros
+          {{ $t('filter.title') }}
         </span>
-        <Button variant="ghost" size="sm" @click="clearFilters">Limpar</Button>
+        <Button variant="ghost" size="sm" @click="clearFilters">{{ $t('filter.clear') }}</Button>
       </div>
     </template>
     <div class="space-y-4">
       <!-- Search -->
       <div>
-        <Input v-model="localSearch" type="text" placeholder="Buscar receitas..." />
+        <Input v-model="localSearch" type="text" :placeholder="$t('filter.search')" />
       </div>
 
       <!-- Category Filter -->
       <div>
         <Select :model-value="modelValue.categoryId || null" @update:model-value="updateFilter('categoryId', $event)"
-          :options="categoryOptions" label="Categoria" />
+          :options="categoryOptions" :label="$t('filter.category')" />
       </div>
 
       <!-- My Recipes Filter -->
       <div v-if="showMyRecipes" class="form-control">
         <label class="label cursor-pointer">
-          <span class="label-text">Mostrar apenas minhas receitas</span>
+          <span class="label-text">{{ $t('filter.showMyRecipes') }}</span>
           <input :checked="modelValue.myRecipes || false" @change="updateFilter('myRecipes', $event.target.checked)"
             type="checkbox" class="checkbox checkbox-primary" />
         </label>
@@ -137,69 +140,69 @@ const applyFilters = () => {
       <!-- Servings Filter -->
       <div>
         <label class="label">
-          <span class="label-text">Porções</span>
+          <span class="label-text">{{ $t('filter.servings') }}</span>
         </label>
         <div class="flex gap-2">
           <Select :model-value="modelValue.servingsOperator || 'exact'"
             @update:model-value="updateFilter('servingsOperator', $event)" :options="operatorOptions" />
           <Input :model-value="modelValue.servingsValue || ''"
             @update:model-value="updateFilter('servingsValue', $event ? Number($event) : null)" type="number"
-            placeholder="Qtd" min="1" />
+            :placeholder="$t('filter.quantity')" min="1" />
         </div>
       </div>
 
       <!-- Prep Time Filter -->
       <div>
         <label class="label">
-          <span class="label-text">Tempo (min)</span>
+          <span class="label-text">{{ $t('filter.prepTime') }}</span>
         </label>
         <div class="flex gap-2">
           <Select :model-value="modelValue.prepTimeOperator || 'exact'"
             @update:model-value="updateFilter('prepTimeOperator', $event)" :options="operatorOptions" />
           <Input :model-value="modelValue.prepTimeValue || ''"
             @update:model-value="updateFilter('prepTimeValue', $event ? Number($event) : null)" type="number"
-            placeholder="Min" min="1" />
+            :placeholder="$t('filter.minutes')" min="1" />
         </div>
       </div>
 
       <!-- Rating Filter -->
       <div>
         <label class="label">
-          <span class="label-text">Avaliação</span>
+          <span class="label-text">{{ $t('filter.rating') }}</span>
         </label>
         <div class="flex gap-2">
           <Select :model-value="modelValue.ratingOperator || 'exact'"
             @update:model-value="updateFilter('ratingOperator', $event)" :options="operatorOptions" />
           <Input :model-value="modelValue.ratingValue || ''"
             @update:model-value="updateFilter('ratingValue', $event ? Number($event) : null)" type="number"
-            placeholder="Nota" min="1" max="5" step="0.1" />
+            :placeholder="$t('filter.note')" min="1" max="5" step="0.1" />
         </div>
       </div>
 
       <!-- Comments Filter -->
       <div>
         <label class="label">
-          <span class="label-text">Comentários</span>
+          <span class="label-text">{{ $t('filter.comments') }}</span>
         </label>
         <div class="flex gap-2">
           <Select :model-value="modelValue.commentsOperator || 'exact'"
             @update:model-value="updateFilter('commentsOperator', $event)" :options="operatorOptions" />
           <Input :model-value="modelValue.commentsValue || ''"
             @update:model-value="updateFilter('commentsValue', $event ? Number($event) : null)" type="number"
-            placeholder="Qtd" min="0" />
+            :placeholder="$t('filter.quantity')" min="0" />
         </div>
       </div>
 
       <!-- Sort By -->
       <div>
         <Select :model-value="modelValue.sortBy || 'recent'" @update:model-value="updateFilter('sortBy', $event)"
-          :options="sortOptions" label="Ordenar por" />
+          :options="sortOptions" :label="$t('filter.sortBy')" />
       </div>
 
       <!-- Clear Filters Button -->
       <div class="pt-2">
         <Button variant="outline" class="w-full" @click="clearFilters">
-          Limpar Filtros
+          {{ $t('filter.clearFilters') }}
         </Button>
       </div>
     </div>

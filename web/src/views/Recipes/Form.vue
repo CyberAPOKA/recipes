@@ -359,7 +359,7 @@ onMounted(async () => {
         </div>
 
         <Select v-model="form.category_id" :options="categoryOptions" :label="$t('recipe.category')"
-          placeholder="Selecione uma categoria" :error="getFieldError('category_id')" />
+          :placeholder="$t('form.selectCategory')" :error="getFieldError('category_id')" />
 
         <div class="flex gap-2 items-end">
           <div class="flex-1">

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoryStore } from '@/stores/category'
 import { publicRecipeApi } from '@/api/recipe'
@@ -12,6 +13,7 @@ import Select from '@/components/daisyui/Select.vue'
 import RecipeFilters from '@/components/RecipeFilters.vue'
 
 const router = useRouter()
+const { t } = useI18n()
 const authStore = useAuthStore()
 const categoryStore = useCategoryStore()
 
@@ -228,20 +230,20 @@ watch(() => [
     <!-- Mobile Filter Toggle -->
     <div
       class="lg:hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-2 sm:mb-0">
-      <h1 class="text-2xl sm:text-3xl font-bold">Receitas</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold">{{ $t('recipe.title') }}</h1>
       <div class="flex gap-2 w-full sm:w-auto">
         <Button variant="secondary" class="flex-1 sm:flex-none" @click="showSidebar = !showSidebar">
           <FontAwesomeIcon :icon="faFilter" class="sm:mr-2" />
-          <span class="hidden sm:inline">Filtros</span>
+          <span class="hidden sm:inline">{{ $t('filter.title') }}</span>
         </Button>
         <Button v-if="authStore.isAuthenticated" variant="primary" class="flex-1 sm:flex-none text-xs sm:text-base"
           @click="$router.push('/recipes/create')">
-          <span class="hidden sm:inline">Criar Receita</span>
-          <span class="sm:hidden">Criar</span>
+          <span class="hidden sm:inline">{{ $t('recipe.create') }}</span>
+          <span class="sm:hidden">{{ $t('common.save') }}</span>
         </Button>
         <Button v-else variant="primary" class="flex-1 sm:flex-none text-xs sm:text-base"
           @click="$router.push('/login')">
-          Entrar
+          {{ $t('auth.login') }}
         </Button>
       </div>
     </div>
@@ -255,7 +257,7 @@ watch(() => [
       showSidebar ? 'fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto overflow-y-auto bg-base-100 lg:bg-transparent p-4 lg:p-0' : 'hidden lg:block'
     ]">
       <div class="lg:hidden flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold">Filtros</h2>
+        <h2 class="text-xl font-bold">{{ $t('filter.title') }}</h2>
         <Button variant="ghost" size="sm" @click="showSidebar = false">
           ✕
         </Button>
@@ -267,7 +269,7 @@ watch(() => [
     <!-- Main Content -->
     <main class="flex-1 min-w-0">
       <div class="hidden lg:flex justify-between items-center mb-4 lg:mb-6">
-        <h1 class="text-2xl sm:text-3xl font-bold">Receitas</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold">{{ $t('recipe.title') }}</h1>
         <div class="flex gap-2 items-center flex-wrap">
           <!-- Layout Toggle -->
           <div class="join">
@@ -280,14 +282,15 @@ watch(() => [
           </div>
           <!-- Per Page Selector -->
           <Select :model-value="perPage" @update:model-value="updatePerPage" :options="layoutMode === 'grid'
-            ? gridPerPageOptions.map(v => ({ value: Number(v), label: `${v} por página` }))
-            : listPerPageOptions.map(v => ({ value: Number(v), label: `${v} por página` }))" class="w-32 sm:w-40" />
+            ? gridPerPageOptions.map(v => ({ value: Number(v), label: `${v} ${t('layout.perPage')}` }))
+            : listPerPageOptions.map(v => ({ value: Number(v), label: `${v} ${t('layout.perPage')}` }))"
+            class="w-32 sm:w-40" />
           <Button v-if="authStore.isAuthenticated" variant="primary" class="hidden lg:inline-flex"
             @click="$router.push('/recipes/create')">
-            Criar Receita
+            {{ $t('recipe.create') }}
           </Button>
           <Button v-else variant="primary" class="hidden lg:inline-flex" @click="$router.push('/login')">
-            Entrar
+            {{ $t('auth.login') }}
           </Button>
         </div>
       </div>
@@ -299,7 +302,7 @@ watch(() => [
 
       <!-- Empty State -->
       <div v-else-if="recipes.length === 0" class="text-center py-8">
-        <p class="text-lg">Nenhuma receita encontrada</p>
+        <p class="text-lg">{{ $t('recipe.noRecipes') }}</p>
       </div>
 
       <!-- Recipes Grid Layout -->
@@ -311,7 +314,7 @@ watch(() => [
             <img v-if="recipe.image" :src="recipe.image" :alt="recipe.name || 'Recipe image'"
               class="w-full h-40 sm:h-48 object-cover rounded-lg mb-2" />
             <div class="flex items-start justify-between gap-2">
-              <h3 class="text-base sm:text-lg font-bold flex-1">{{ recipe.name || 'Receita sem nome' }}</h3>
+              <h3 class="text-base sm:text-lg font-bold flex-1">{{ recipe.name || $t('recipe.noName') }}</h3>
               <div v-if="recipe.category" class="badge badge-primary text-xs">
                 {{ recipe.category.name }}
               </div>
@@ -324,7 +327,7 @@ watch(() => [
               </span>
               <span v-if="recipe.servings" class="flex items-center gap-1">
                 <FontAwesomeIcon :icon="faUsers" class="text-xs" />
-                {{ recipe.servings }} porções
+                {{ recipe.servings }} {{ $t('recipe.servingsUnit') }}
               </span>
             </div>
 
@@ -347,12 +350,13 @@ watch(() => [
             <!-- Comments Count -->
             <div v-if="recipe.comments_count" class="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
               <FontAwesomeIcon :icon="faComments" class="text-xs" />
-              <span>{{ recipe.comments_count }} comentário{{ recipe.comments_count !== 1 ? 's' : '' }}</span>
+              <span>{{ recipe.comments_count }} {{ recipe.comments_count !== 1 ? $t('recipe.comments') :
+                $t('recipe.comment') }}</span>
             </div>
 
             <!-- Author -->
             <div v-if="recipe.user" class="text-xs sm:text-sm text-gray-500">
-              Por: {{ recipe.user.name }}
+              {{ $t('recipe.by') }} {{ recipe.user.name }}
             </div>
           </div>
         </Card>
@@ -374,14 +378,11 @@ watch(() => [
             <!-- Content -->
             <div class="flex-1 min-w-0 space-y-2">
               <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                <h3 class="text-lg sm:text-xl font-bold flex-1">{{ recipe.name || 'Receita sem nome' }}</h3>
+                <h3 class="text-lg sm:text-xl font-bold flex-1">{{ recipe.name || $t('recipe.noName') }}</h3>
                 <!-- Category -->
                 <div class="flex-shrink-0">
                   <div v-if="recipe.category" class="badge badge-primary text-xs">
                     {{ recipe.category.name }}
-                  </div>
-                  <div v-else class="badge badge-secondary text-xs">
-                    Sem categoria
                   </div>
                 </div>
               </div>
@@ -393,7 +394,7 @@ watch(() => [
                 </span>
                 <span v-if="recipe.servings" class="flex items-center gap-1">
                   <FontAwesomeIcon :icon="faUsers" class="text-xs" />
-                  {{ recipe.servings }} porções
+                  {{ recipe.servings }} {{ $t('recipe.servingsUnit') }}
                 </span>
               </div>
 
@@ -416,12 +417,13 @@ watch(() => [
               <!-- Comments Count -->
               <div v-if="recipe.comments_count" class="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
                 <FontAwesomeIcon :icon="faComments" class="text-xs" />
-                <span>{{ recipe.comments_count }} comentário{{ recipe.comments_count !== 1 ? 's' : '' }}</span>
+                <span>{{ recipe.comments_count }} {{ recipe.comments_count !== 1 ? $t('recipe.comments') :
+                  $t('recipe.comment') }}</span>
               </div>
 
               <!-- Author -->
               <div v-if="recipe.user" class="text-xs sm:text-sm text-gray-500">
-                Por: {{ recipe.user.name }}
+                {{ $t('recipe.by') }} {{ recipe.user.name }}
               </div>
 
               <!-- Instructions Preview -->

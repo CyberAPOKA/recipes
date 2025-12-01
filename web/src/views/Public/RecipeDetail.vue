@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { publicRecipeApi, recipeApi } from '@/api/recipe'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -12,6 +13,7 @@ import Textarea from '@/components/daisyui/Textarea.vue'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const authStore = useAuthStore()
 
 const recipe = ref(null)
@@ -73,14 +75,14 @@ const submitComment = async () => {
     newComment.value = ''
   } catch (error) {
     console.error('Error submitting comment:', error)
-    alert('Erro ao adicionar comentário')
+    alert(t('recipe.addCommentError'))
   } finally {
     submittingComment.value = false
   }
 }
 
 const deleteComment = async (commentId) => {
-  if (!confirm('Tem certeza que deseja excluir este comentário?')) {
+  if (!confirm(t('recipe.deleteCommentConfirm'))) {
     return
   }
 
@@ -89,7 +91,7 @@ const deleteComment = async (commentId) => {
     comments.value = comments.value.filter(c => c.id !== commentId)
   } catch (error) {
     console.error('Error deleting comment:', error)
-    alert('Erro ao excluir comentário')
+    alert(t('recipe.deleteCommentError'))
   }
 }
 
@@ -100,7 +102,7 @@ const submitRating = async (rating) => {
   }
 
   if (recipe.value.user_id === authStore.user.id) {
-    alert('Você não pode avaliar sua própria receita')
+    alert(t('recipe.rateOwnRecipeError'))
     return
   }
 
@@ -113,9 +115,9 @@ const submitRating = async (rating) => {
   } catch (error) {
     console.error('Error submitting rating:', error)
     if (error.response?.status === 403) {
-      alert('Você não pode avaliar sua própria receita')
+      alert(t('recipe.rateOwnRecipeError'))
     } else {
-      alert('Erro ao avaliar receita')
+      alert(t('recipe.rateError'))
     }
   } finally {
     submittingRating.value = false
@@ -162,14 +164,14 @@ const downloadPdf = async () => {
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${(recipe.value.name || 'receita').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`
+    link.download = `${(recipe.value.name || t('recipe.noName')).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
   } catch (error) {
     console.error('Error downloading PDF:', error)
-    alert('Erro ao baixar PDF. Tente novamente.')
+    alert(t('recipe.downloadPdfError'))
   }
 }
 
@@ -178,17 +180,17 @@ const printRecipe = () => {
 }
 
 const deleteRecipe = async () => {
-  if (!confirm('Tem certeza que deseja excluir esta receita? Esta ação não pode ser desfeita.')) {
+  if (!confirm(t('recipe.deleteConfirmMessage'))) {
     return
   }
 
   try {
     await recipeApi.delete(recipe.value.id)
-    alert('Receita excluída com sucesso!')
+    alert(t('recipe.deleteSuccess'))
     router.push('/')
   } catch (error) {
     console.error('Error deleting recipe:', error)
-    alert('Erro ao excluir receita')
+    alert(t('recipe.deleteError'))
   }
 }
 
@@ -212,30 +214,30 @@ watch(() => route.params.id, () => {
       <div class="mb-6">
         <div class="flex justify-between items-start mb-4">
           <Button variant="ghost" class="no-print" @click="$router.push('/')">
-            ← Voltar
+            ← {{ $t('recipe.back') }}
           </Button>
           <div class="flex gap-2  no-print">
             <Button variant="secondary" @click="printRecipe">
               <FontAwesomeIcon :icon="faPrint" class="mr-2" />
-              Imprimir
+              {{ $t('recipe.print') }}
             </Button>
             <Button variant="secondary" @click="downloadPdf">
               <FontAwesomeIcon :icon="faDownload" class="mr-2" />
-              PDF
+              {{ $t('recipe.pdf') }}
             </Button>
             <Button v-if="isRecipeOwner" variant="primary" @click="$router.push(`/recipes/${recipe.id}/edit`)">
               <FontAwesomeIcon :icon="faEdit" class="mr-2" />
-              Editar
+              {{ $t('recipe.edit') }}
             </Button>
             <Button v-if="isRecipeOwner" variant="error" @click="deleteRecipe">
               <FontAwesomeIcon :icon="faTrash" class="mr-2" />
-              Excluir
+              {{ $t('recipe.delete') }}
             </Button>
           </div>
         </div>
-        <h1 class="text-3xl font-bold">{{ recipe.name || 'Receita sem nome' }}</h1>
+        <h1 class="text-3xl font-bold">{{ recipe.name || $t('recipe.noName') }}</h1>
         <div v-if="recipe.user" class="text-gray-500 mt-2">
-          Por: {{ recipe.user.name }}
+          {{ $t('recipe.by') }} {{ recipe.user.name }}
         </div>
       </div>
 
@@ -251,18 +253,18 @@ watch(() => route.params.id, () => {
       <!-- Stats -->
       <div class="grid grid-cols-2 gap-4 mb-6">
         <div v-if="recipe.prep_time_minutes" class="stat">
-          <div class="stat-title">Tempo de preparo</div>
+          <div class="stat-title">{{ $t('recipe.prepTimeLabel') }}</div>
           <div class="stat-value text-lg">{{ formatTime(recipe.prep_time_minutes) }}</div>
         </div>
         <div v-if="recipe.servings" class="stat">
-          <div class="stat-title">Porções</div>
+          <div class="stat-title">{{ $t('recipe.servingsLabel') }}</div>
           <div class="stat-value text-lg">{{ recipe.servings }}</div>
         </div>
       </div>
 
       <!-- Ingredients -->
       <div v-if="recipe.ingredients" class="mb-6">
-        <h2 class="text-xl font-bold mb-2">Ingredientes</h2>
+        <h2 class="text-xl font-bold mb-2">{{ $t('recipe.ingredientsLabel') }}</h2>
         <div
           class="max-w-none prose prose-lg [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:my-4 [&_h2]:text-3xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-2xl [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_blockquote]:border-l-4 [&_blockquote]:border-base-300 [&_blockquote]:pl-4 [&_blockquote]:my-4 [&_blockquote]:italic [&_hr]:border-t [&_hr]:border-base-300 [&_hr]:my-4 [&_a]:link [&_a]:link-primary"
           v-html="recipe.ingredients"></div>
@@ -270,7 +272,7 @@ watch(() => route.params.id, () => {
 
       <!-- Instructions -->
       <div class="mb-6">
-        <h2 class="text-xl font-bold mb-2">Modo de preparo</h2>
+        <h2 class="text-xl font-bold mb-2">{{ $t('recipe.instructionsLabel') }}</h2>
         <div
           class="max-w-none prose prose-lg [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:my-4 [&_h2]:text-3xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-2xl [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-1 [&_blockquote]:border-l-4 [&_blockquote]:border-base-300 [&_blockquote]:pl-4 [&_blockquote]:my-4 [&_blockquote]:italic [&_hr]:border-t [&_hr]:border-base-300 [&_hr]:my-4 [&_a]:link [&_a]:link-primary"
           v-html="recipe.instructions"></div>
@@ -281,7 +283,7 @@ watch(() => route.params.id, () => {
         class="mb-6 no-print">
 
         <div class="flex items-center justify-between">
-          <span>Avaliação</span>
+          <span>{{ $t('rating.title') }}</span>
           <div v-if="Number(averageRating) > 0 || Number(ratingsCount) > 0" class="flex items-center gap-2">
             <div class="flex items-center gap-1">
               <FontAwesomeIcon v-for="i in renderStars(averageRating).full" :key="`full-${i}`" :icon="faStar"
@@ -293,13 +295,13 @@ watch(() => route.params.id, () => {
             </div>
             <span class="font-bold">{{ averageRating.toFixed(1) }}</span>
             <span v-if="ratingsCount" class="text-sm text-gray-500">
-              ({{ ratingsCount }} avaliação{{ ratingsCount !== 1 ? 'ões' : '' }})
+              ({{ ratingsCount }} {{ ratingsCount !== 1 ? $t('rating.ratings') : $t('rating.rating') }})
             </span>
           </div>
         </div>
 
         <div v-if="authStore.isAuthenticated && recipe.user_id !== authStore.user.id">
-          <p class="mb-2">Sua avaliação:</p>
+          <p class="mb-2">{{ $t('rating.yourRating') }}</p>
           <div class="flex gap-1">
             <button v-for="i in 5" :key="i" @click="submitRating(i)" :disabled="submittingRating"
               class="text-2xl transition-colors" :class="i <= selectedRating ? 'text-yellow-400' : 'text-gray-300'">
@@ -308,7 +310,7 @@ watch(() => route.params.id, () => {
           </div>
         </div>
         <div v-else-if="!authStore.isAuthenticated" class="text-gray-500">
-          <a href="/login" class="link link-primary">Faça login</a> para avaliar esta receita
+          <a href="/login" class="link link-primary">{{ $t('auth.login') }}</a> {{ $t('rating.loginToRate') }}
         </div>
       </Card>
 
@@ -317,24 +319,24 @@ watch(() => route.params.id, () => {
         <template #title>
           <div class="flex items-center gap-2">
             <FontAwesomeIcon :icon="faComments" />
-            <span>Comentários ({{ comments.length }})</span>
+            <span>{{ $t('comment.title') }} ({{ comments.length }})</span>
           </div>
         </template>
 
         <!-- Add Comment Form -->
         <div v-if="authStore.isAuthenticated" class="mb-6">
-          <Textarea v-model="newComment" placeholder="Deixe um comentário..." :rows="4" />
+          <Textarea v-model="newComment" :placeholder="$t('comment.placeholder')" :rows="4" />
           <Button variant="primary" class="mt-2" :loading="submittingComment" @click="submitComment">
-            Enviar comentário
+            {{ $t('comment.submit') }}
           </Button>
         </div>
         <div v-else class="mb-6 text-gray-500">
-          <a href="/login" class="link link-primary">Faça login</a> para deixar um comentário
+          <a href="/login" class="link link-primary">{{ $t('auth.login') }}</a> {{ $t('comment.loginToComment') }}
         </div>
 
         <!-- Comments List -->
         <div v-if="comments.length === 0" class="text-center py-4 text-gray-500">
-          Nenhum comentário ainda. Seja o primeiro a comentar!
+          {{ $t('comment.none') }}
         </div>
         <div v-else class="space-y-4">
           <div v-for="comment in comments" :key="comment.id" class="border-b border-base-300 pb-4 last:border-0">
@@ -356,9 +358,9 @@ watch(() => route.params.id, () => {
     </div>
 
     <div v-else class="text-center py-8">
-      <p>Receita não encontrada</p>
+      <p>{{ $t('recipe.notFound') }}</p>
       <Button variant="primary" @click="$router.push('/')" class="mt-4">
-        Voltar
+        {{ $t('recipe.back') }}
       </Button>
     </div>
   </div>
